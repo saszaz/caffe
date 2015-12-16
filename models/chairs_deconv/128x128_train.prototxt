@@ -24,7 +24,7 @@ layer {
     phase: TRAIN
   }
   hdf5_data_param {
-    source: "deconv_test/chairs_data/angles_reduced_shuffle_mod.txt"
+    source: "data/chairs_data/angles_reduced_shuffle_mod.txt"
     batch_size: 64
   }
 }

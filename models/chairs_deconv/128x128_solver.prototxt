@@ -1,4 +1,4 @@
-train_net: "deconv_test/deconv_model/128x128_train.prototxt"
+train_net: "models/chairs_deconv/128x128_train.prototxt"
 
 base_lr: 0.0001
 lr_policy: "step"
@@ -19,7 +19,7 @@ max_iter: 900000
 momentum: 0.9
 weight_decay: 0.00
 snapshot: 10000
-snapshot_prefix: "deconv_test/deconv_model/chairs_128x128"
+snapshot_prefix: "models/chairs_deconv/chairs_128x128"
 #termination_criterion: MAX_ITER
 #device_id: 0
 #snapshot_on_exit: 1
