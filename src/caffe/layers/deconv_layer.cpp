@@ -15,7 +15,10 @@ void DeconvolutionLayer<Dtype>::compute_output_shape() {
     const int input_dim = this->input_shape(i + 1);
     const int output_dim = stride_data[i] * (input_dim - 1)
         + kernel_shape_data[i] - 2 * pad_data[i];
+    // const int output_dim = stride_data[i] * (input_dim - 1)
+        // + kernel_shape_data[i] - 2 * pad_data[i] + 1; // Sasha: Added "1" to match paper dim
     this->output_shape_.push_back(output_dim);
+
   }
 }
 
