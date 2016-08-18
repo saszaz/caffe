@@ -31,7 +31,19 @@ void SplitLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   }
 }
 
-
+template <typename Dtype>
+void SplitLayer<Dtype>::ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {
+  caffe_copy(count_, bottom[0]->gpu_diff(), top[0]->mutable_gpu_diff());
+  if (top.size() == 1) {
+    return;
+  }
+  caffe_copy(count_, bottom[0]->gpu_diff(), top[1]->mutable_gpu_diff());
+  for (int i = 2; i < top.size(); ++i) {
+    caffe_copy(count_, bottom[0]->gpu_diff(), top[i]->mutable_gpu_diff());
+  }
+}
+INSTANTIATE_LAYER_GPU_FORWARDJV(SplitLayer);
 INSTANTIATE_LAYER_GPU_FUNCS(SplitLayer);
 
 }  // namespace caffe

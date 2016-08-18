@@ -176,6 +176,13 @@ class Layer {
       const vector<bool>& propagate_down,
       const vector<Blob<Dtype>*>& bottom);
 
+  
+  /** 
+   * Amirreza
+   */ 
+  inline void ForwardJv(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  
   /**
    * @brief Returns the vector of learnable parameter blobs.
    */
@@ -343,6 +350,22 @@ class Layer {
     // LOG(WARNING) << "Using CPU code as backup.";
     return Forward_cpu(bottom, top);
   }
+  /**
+   * Amirreza 
+   *@brief Using the CPU device, compute the layer Jv output. */
+  virtual void ForwardJv_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {
+      LOG(FATAL) << "ForwardJv Is Not Implemented Yet For " << layer_param_.type() << " Layer!";
+  }
+  /**
+   * Amirreza
+   * @brief Using the GPU device, compute the layer Jv output.
+   *        Fall back to ForwardJv_cpu() if unavailable.
+   */
+  virtual void ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {
+    ForwardJv_cpu(bottom, top);
+  }
 
   /**
    * @brief Using the CPU device, compute the gradients for any parameters and
@@ -500,6 +523,25 @@ inline void Layer<Dtype>::Backward(const vector<Blob<Dtype>*>& top,
   default:
     LOG(FATAL) << "Unknown caffe mode.";
   }
+}
+
+/** Amirreza
+ */
+template <typename Dtype>
+inline void Layer<Dtype>::ForwardJv(const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
+  Lock();
+  switch (Caffe::mode()) {
+  case Caffe::CPU:
+    ForwardJv_cpu(bottom, top);
+    break;
+  case Caffe::GPU:
+    ForwardJv_gpu(bottom, top);
+    break;
+  default:
+    LOG(FATAL) << "Unknown caffe mode.";
+  }
+  Unlock();
 }
 
 // Serialize LayerParameter to protocol buffer

@@ -38,7 +38,8 @@ class ReshapeLayer : public Layer<Dtype> {
       const vector<Blob<Dtype>*>& top) {}
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {}
-
+  virtual void ForwardJv_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {}
   /// @brief vector of axes indices whose dimensions we'll copy from the bottom
   vector<int> copy_axes_;
   /// @brief the index of the axis whose dimension we infer, or -1 if none

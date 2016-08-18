@@ -114,6 +114,27 @@ void SliceLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   }
 }
 
+template <typename Dtype>
+void SliceLayer<Dtype>::ForwardJv_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {
+  if (top.size() == 1) { return; }
+  int offset_slice_axis = 0;
+  const Dtype* bottom_jv_data = bottom[0]->cpu_diff();
+  const int bottom_slice_axis = bottom[0]->shape(slice_axis_);
+  for (int i = 0; i < top.size(); ++i) {
+    Dtype* top_jv_data = top[i]->mutable_cpu_diff();
+    const int top_slice_axis = top[i]->shape(slice_axis_);
+    for (int n = 0; n < num_slices_; ++n) {
+      const int top_offset = n * top_slice_axis * slice_size_;
+      const int bottom_offset =
+          (n * bottom_slice_axis + offset_slice_axis) * slice_size_;
+      caffe_copy(top_slice_axis * slice_size_,
+          bottom_jv_data + bottom_offset, top_jv_data + top_offset);
+    }
+    offset_slice_axis += top_slice_axis;
+  }
+}
+
 #ifdef CPU_ONLY
 STUB_GPU(SliceLayer);
 #endif

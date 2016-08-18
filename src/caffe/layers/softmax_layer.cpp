@@ -85,6 +85,29 @@ void SoftmaxLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   caffe_mul(top[0]->count(), bottom_diff, top_data, bottom_diff);
 }
 
+template <typename Dtype>
+void SoftmaxLayer<Dtype>::ForwardJv_cpu(const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  Dtype* top_jv_data = top[0]->mutable_cpu_diff();
+  const Dtype* top_data = top[0]->cpu_data();
+  const Dtype* bottom_jv_data = bottom[0]->cpu_diff();
+  Dtype* scale_data = scale_.mutable_cpu_data();
+  int channels = top[0]->shape(softmax_axis_);
+  int dim = top[0]->count() / outer_num_;
+  caffe_copy(top[0]->count(), bottom_jv_data, top_jv_data);
+  for (int i = 0; i < outer_num_; ++i) {
+    // compute dot(bottom_jv_data, top_data) and subtract them from the bottom diff
+    for (int k = 0; k < inner_num_; ++k) {
+      scale_data[k] = caffe_cpu_strided_dot<Dtype>(channels,
+          top_jv_data + i * dim + k, inner_num_,
+          top_data + i * dim + k, inner_num_);
+    }
+    // subtraction
+    caffe_cpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, channels, inner_num_, 1,
+        -1., sum_multiplier_.cpu_data(), scale_data, 1., top_jv_data + i * dim);
+  }
+  // elementwise multiplication
+  caffe_mul(top[0]->count(), top_jv_data, top_data, top_jv_data);
+}
 
 #ifdef CPU_ONLY
 STUB_GPU(SoftmaxLayer);

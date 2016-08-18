@@ -32,7 +32,8 @@ class CuDNNReLULayer : public ReLULayer<Dtype> {
       const vector<Blob<Dtype>*>& top);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
-
+  virtual void ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
   bool handles_setup_;
   cudnnHandle_t             handle_;
   cudnnTensorDescriptor_t bottom_desc_;

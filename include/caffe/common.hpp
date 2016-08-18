@@ -64,7 +64,26 @@ private:\
 #define INSTANTIATE_LAYER_GPU_FUNCS(classname) \
   INSTANTIATE_LAYER_GPU_FORWARD(classname); \
   INSTANTIATE_LAYER_GPU_BACKWARD(classname)
+  
+#define INSTANTIATE_LAYER_GPU_FORWARDRV(classname) \
+  template void classname<float>::ForwardRv_gpu( \
+      const std::vector<Blob<float>*>& bottom, \
+      const std::vector<Blob<float>*>& top, \
+      const std::vector<Blob<float>*>& bottom_jv, \
+      const std::vector<Blob<float>*>& top_jv); \
+  template void classname<double>::ForwardRv_gpu( \
+      const std::vector<Blob<double>*>& bottom, \
+      const std::vector<Blob<double>*>& top, \
+      const std::vector<Blob<double>*>& bottom_jv, \
+      const std::vector<Blob<double>*>& top_jv);
 
+#define INSTANTIATE_LAYER_GPU_FORWARDJV(classname) \
+  template void classname<float>::ForwardJv_gpu( \
+      const std::vector<Blob<float>*>& bottom, \
+      const std::vector<Blob<float>*>& top); \
+  template void classname<double>::ForwardJv_gpu( \
+      const std::vector<Blob<double>*>& bottom, \
+      const std::vector<Blob<double>*>& top);
 // A simple macro to mark codes that are not implemented, so that when the code
 // is executed we will see a fatal log.
 #define NOT_IMPLEMENTED LOG(FATAL) << "Not Implemented Yet"

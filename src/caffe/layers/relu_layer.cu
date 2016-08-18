@@ -41,6 +41,15 @@ __global__ void ReLUBackward(const int n, const Dtype* in_diff,
 }
 
 template <typename Dtype>
+__global__ void ReLUForwardJv(const int n, const Dtype* bottom_data,
+    const Dtype* bottom_jv_data, Dtype* top_jv_data, Dtype negative_slope) {
+  CUDA_KERNEL_LOOP(index, n) {
+    top_jv_data[index] = bottom_jv_data[index] * ((bottom_data[index] > 0)
+        + (bottom_data[index] <= 0) * negative_slope);
+  }
+}
+
+template <typename Dtype>
 void ReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
@@ -58,6 +67,22 @@ void ReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 }
 
 
+template <typename Dtype>
+void ReLULayer<Dtype>::ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
+  const Dtype* bottom_data = bottom[0]->gpu_data();
+  const Dtype* bottom_jv_data = bottom[0]->gpu_diff();
+  Dtype* top_jv_data = top[0]->mutable_gpu_diff();
+  
+  const int count = bottom[0]->count();
+  Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  ReLUForwardJv<Dtype><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
+      count, bottom_data, bottom_jv_data, top_jv_data, negative_slope);
+  CUDA_POST_KERNEL_CHECK;
+}
+
+INSTANTIATE_LAYER_GPU_FORWARDJV(ReLULayer);
 INSTANTIATE_LAYER_GPU_FUNCS(ReLULayer);
 
 

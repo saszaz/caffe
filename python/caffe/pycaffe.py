@@ -123,6 +123,35 @@ def _Net_forward(self, blobs=None, start=None, end=None, **kwargs):
     # Unpack blobs to extract
     return {out: self.blobs[out].data for out in outputs}
 
+def _Net_forwardJ(self, start, end, bottom, top):
+    #print (start, bottom), (end, top)
+    start_ind = list(self._layer_names).index(start)
+    end_ind = list(self._layer_names).index(end)
+    
+    top_inds = Net._top_ids(self, end_ind)
+    bottom_inds = Net._bottom_ids(self, start_ind)
+    
+    try:
+        top_ind = list(top_inds).index(self.blobs.keys().index(top))
+    except:
+        raise Exception('End layer ' + end + ' doesnt have top ' + top) 
+    try:
+        bottom_ind = list(bottom_inds).index(self.blobs.keys().index(bottom))
+    except:
+        raise Exception('Start layer ' + start + ' doesnt have bottom ' + bottom)
+    	
+    n = self.blobs[bottom].data.shape[0]
+    n_in = reduce(lambda x, y: x*y, self.blobs[bottom].data.shape[1:])
+    n_out = reduce(lambda x, y: x*y, self.blobs[top].data.shape[1:])
+    
+    j = np.zeros((n, n_out, n_in))
+    for i in range(n_in):
+	self._forwardjv(start_ind, end_ind, bottom_ind, i)
+	#print self.blobs[bottom].diff
+	#print n_in, n_out
+	output = np.reshape(self.blobs[top].diff, (n, n_out))
+	j[:, :, i] = output
+    return j
 
 def _Net_backward(self, diffs=None, start=None, end=None, **kwargs):
     """
@@ -323,6 +352,7 @@ Net.blobs = _Net_blobs
 Net.blob_loss_weights = _Net_blob_loss_weights
 Net.params = _Net_params
 Net.forward = _Net_forward
+Net.forwardJ = _Net_forwardJ
 Net.backward = _Net_backward
 Net.forward_all = _Net_forward_all
 Net.forward_backward_all = _Net_forward_backward_all

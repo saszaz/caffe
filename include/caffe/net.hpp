@@ -37,6 +37,9 @@ class Net {
    *
    */
   const vector<Blob<Dtype>*>& Forward(Dtype* loss = NULL);
+  const Blob<Dtype>& ForwardJ(const int start, const int end, const int bottom_id, const int top_id);
+  void ForwardJv(const int start_ind, const int end_ind, const int bottom_ind, const int v_ind);
+  
   /// @brief DEPRECATED; use Forward() instead.
   const vector<Blob<Dtype>*>& ForwardPrefilled(Dtype* loss = NULL) {
     LOG_EVERY_N(WARNING, 1000) << "DEPRECATED: ForwardPrefilled() "
@@ -308,6 +311,7 @@ class Net {
   bool debug_info_;
   /// The root net that actually holds the shared layers in data parallelism
   const Net* const root_net_;
+  Blob<Dtype> net_j_;
   DISABLE_COPY_AND_ASSIGN(Net);
 };
 

@@ -74,6 +74,20 @@ void DeconvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   }
 }
 
+template <typename Dtype>
+void DeconvolutionLayer<Dtype>::ForwardJv_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {
+  const Dtype* weight = this->blobs_[0]->cpu_data();
+  for (int i = 0; i < bottom.size(); ++i) {
+    const Dtype* bottom_data = bottom[i]->cpu_diff();
+    Dtype* top_data = top[i]->mutable_cpu_diff();
+    for (int n = 0; n < this->num_; ++n) {
+      this->backward_cpu_gemm(bottom_data + n * this->bottom_dim_, weight,
+          top_data + n * this->top_dim_);
+    }
+  }
+}
+
 #ifdef CPU_ONLY
 STUB_GPU(DeconvolutionLayer);
 #endif

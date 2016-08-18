@@ -142,6 +142,29 @@ void SoftmaxLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   caffe_gpu_mul<Dtype>(top[0]->count(), bottom_diff, top_data, bottom_diff);
 }
 
+template <typename Dtype>
+void SoftmaxLayer<Dtype>::ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  Dtype* top_jv_data = top[0]->mutable_gpu_diff();
+  const Dtype* top_data = top[0]->gpu_data();
+  const Dtype* btottom_jv_data = bottom[0]->gpu_diff();
+  Dtype* scale_data = scale_.mutable_gpu_data();
+  int count = top[0]->count();
+  int channels = top[0]->shape(softmax_axis_);
+  caffe_copy(count, btottom_jv_data, top_jv_data);
+  // Compute inner1d(btottom_jv_data, top_data) and subtract them from the bottom diff.
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  kernel_channel_dot<Dtype><<<CAFFE_GET_BLOCKS(outer_num_ * inner_num_),
+      CAFFE_CUDA_NUM_THREADS>>>(outer_num_, channels, inner_num_,
+      btottom_jv_data, top_data, scale_data);
+  // NOLINT_NEXT_LINE(whitespace/operators)
+  kernel_channel_subtract<Dtype><<<CAFFE_GET_BLOCKS(count),
+      CAFFE_CUDA_NUM_THREADS>>>(count, outer_num_, channels, inner_num_,
+      scale_data, top_jv_data);
+  // elementwise multiplication
+  caffe_gpu_mul<Dtype>(top[0]->count(), top_jv_data, top_data, top_jv_data);
+}
+
+INSTANTIATE_LAYER_GPU_FORWARDJV(SoftmaxLayer);
 INSTANTIATE_LAYER_GPU_FUNCS(SoftmaxLayer);
 
 

@@ -74,6 +74,25 @@ void InnerProductLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   }
 }
 
+
+template <typename Dtype>
+void InnerProductLayer<Dtype>::ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
+  const Dtype* bottom_jv_data = bottom[0]->gpu_diff();
+  Dtype* top_jv_data = top[0]->mutable_gpu_diff();
+  const Dtype* weight = this->blobs_[0]->gpu_data();
+  if (M_ == 1) {
+    caffe_gpu_gemv<Dtype>(CblasNoTrans, N_, K_, (Dtype)1.,
+                         weight, bottom_jv_data, (Dtype)0., top_jv_data);
+  } else {
+    caffe_gpu_gemm<Dtype>(CblasNoTrans,
+                          transpose_ ? CblasNoTrans : CblasTrans,
+                          M_, N_, K_, (Dtype)1.,
+                          bottom_jv_data, weight, (Dtype)0., top_jv_data);
+  }
+}
+
+INSTANTIATE_LAYER_GPU_FORWARDJV(InnerProductLayer);
 INSTANTIATE_LAYER_GPU_FUNCS(InnerProductLayer);
 
 }  // namespace caffe

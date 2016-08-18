@@ -68,6 +68,39 @@ void CuDNNReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 #endif
 }
 
+template <typename Dtype>
+void CuDNNReLULayer<Dtype>::ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
+  // Fallback to standard Caffe for leaky ReLU.
+  if (ReLULayer<Dtype>::layer_param_.relu_param().negative_slope() != 0) {
+    return ReLULayer<Dtype>::ForwardJv_gpu(bottom, top);
+  }
+
+  const Dtype* bottom_data = bottom[0]->gpu_data();
+  const Dtype* top_data = top[0]->gpu_data();
+  const Dtype* bottom_jv_data = bottom[0]->gpu_diff();
+  Dtype* top_jv_data = top[0]->mutable_gpu_diff();
+  
+#if CUDNN_VERSION_MIN(5, 0, 0)
+  CUDNN_CHECK(cudnnActivationBackward(this->handle_,
+        activ_desc_,
+        cudnn::dataType<Dtype>::one,
+        this->top_desc_, top_data, this->bottom_desc_, bottom_jv_data,
+        this->bottom_desc_, bottom_data,
+        cudnn::dataType<Dtype>::zero,
+        this->top_desc_, top_jv_data));
+#else
+  CUDNN_CHECK(cudnnActivationBackward_v4(this->handle_,
+        activ_desc_,
+        cudnn::dataType<Dtype>::one,
+        this->top_desc_, top_data, this->bottom_desc_, bottom_jv_data,
+        this->bottom_desc_, bottom_data,
+        cudnn::dataType<Dtype>::zero,
+        this->top_desc_, top_jv_data));
+#endif
+}
+
+INSTANTIATE_LAYER_GPU_FORWARDJV(CuDNNReLULayer);
 INSTANTIATE_LAYER_GPU_FUNCS(CuDNNReLULayer);
 
 }  // namespace caffe

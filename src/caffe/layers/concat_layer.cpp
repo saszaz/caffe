@@ -94,6 +94,26 @@ void ConcatLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   }
 }
 
+template <typename Dtype>
+void ConcatLayer<Dtype>::ForwardJv_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {
+  if (bottom.size() == 1) { return; }
+  Dtype* top_jv_data = top[0]->mutable_cpu_diff();
+  int offset_concat_axis = 0;
+  const int top_concat_axis = top[0]->shape(concat_axis_);
+  for (int i = 0; i < bottom.size(); ++i) {
+    const Dtype* bottom_jv_data = bottom[i]->cpu_diff();
+    const int bottom_concat_axis = bottom[i]->shape(concat_axis_);
+    for (int n = 0; n < num_concats_; ++n) {
+      caffe_copy(bottom_concat_axis * concat_input_size_,
+          bottom_jv_data + n * bottom_concat_axis * concat_input_size_,
+          top_jv_data + (n * top_concat_axis + offset_concat_axis)
+              * concat_input_size_);
+    }
+    offset_concat_axis += bottom_concat_axis;
+  }
+}
+
 #ifdef CPU_ONLY
 STUB_GPU(ConcatLayer);
 #endif

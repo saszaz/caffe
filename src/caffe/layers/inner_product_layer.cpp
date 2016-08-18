@@ -140,6 +140,17 @@ void InnerProductLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   }
 }
 
+template <typename Dtype>
+void InnerProductLayer<Dtype>::ForwardJv_cpu(const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
+  const Dtype* bottom_jv_data = bottom[0]->cpu_diff();
+  Dtype* top_jv_data = top[0]->mutable_cpu_diff();
+  const Dtype* weight = this->blobs_[0]->cpu_data();
+  caffe_cpu_gemm<Dtype>(CblasNoTrans, transpose_ ? CblasNoTrans : CblasTrans,
+      M_, N_, K_, (Dtype)1.,
+      bottom_jv_data, weight, (Dtype)0., top_jv_data);
+}
+
 #ifdef CPU_ONLY
 STUB_GPU(InnerProductLayer);
 #endif

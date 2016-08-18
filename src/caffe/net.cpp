@@ -575,6 +575,79 @@ const vector<Blob<Dtype>*>& Net<Dtype>::Forward(Dtype* loss) {
 }
 
 template <typename Dtype>
+const Blob<Dtype>& Net<Dtype>::ForwardJ(const int start_ind, const int end_ind, const int bottom_ind, const int top_ind) {
+    Blob<Dtype>* input_blob = bottom_vecs_[start_ind][bottom_ind];
+    Blob<Dtype>* output_blob = top_vecs_[end_ind][top_ind];
+    
+    const int n = input_blob->num();
+    const int count_in = input_blob->count();
+    const int n_in = count_in/n;
+    const int n_out = output_blob->count()/n;
+    vector<int> j_shape;
+    j_shape.push_back(n_in);
+    j_shape.push_back(n);
+    j_shape.push_back(n_out);
+    net_j_.Reshape(j_shape);
+    switch (Caffe::mode()) {
+	case Caffe::CPU:
+	    for (int v = 0; v < n_in; v++) {
+		caffe_set(input_blob->count(), (Dtype) 0.0, input_blob->mutable_cpu_diff());
+		caffe_strided_set(input_blob->count(), (Dtype) 1.0, input_blob->mutable_cpu_diff() + v, n);
+		for (int i = start_ind; i <= end_ind; ++i) {
+		    layers_[i]->ForwardJv(bottom_vecs_[i], top_vecs_[i]);
+		}
+		caffe_copy(output_blob->count(), output_blob->cpu_diff(), net_j_.mutable_cpu_diff() + count_in * v);
+	    }
+	    break;
+	case Caffe::GPU:
+	    #ifndef CPU_ONLY
+	    for (int v = 0; v < n_in; v++) {
+		caffe_gpu_set(input_blob->count(), (Dtype) 0.0, input_blob->mutable_gpu_diff());
+		caffe_gpu_strided_set(input_blob->count(), (Dtype) 1.0, input_blob->mutable_gpu_diff() + v, n);
+		for (int i = start_ind; i <= end_ind; ++i) {
+		    layers_[i]->ForwardJv(bottom_vecs_[i], top_vecs_[i]);
+		}
+		caffe_copy(output_blob->count(), output_blob->gpu_diff(), net_j_.mutable_gpu_diff() + count_in * v);
+	    }
+	    #else
+	    NO_GPU;
+	    #endif
+	    break;
+    }
+    return net_j_;
+}
+
+
+
+template <typename Dtype>
+void Net<Dtype>::ForwardJv(const int start_ind, const int end_ind, const int bottom_ind, const int v_ind) {
+    Blob<Dtype>* input_blob = bottom_vecs_[start_ind][bottom_ind];
+    
+    const int n = input_blob->num();
+    const int count_in = input_blob->count();
+    switch (Caffe::mode()) {
+	case Caffe::CPU:
+	    caffe_set(count_in, (Dtype) 0.0, input_blob->mutable_cpu_diff());
+	    caffe_strided_set(count_in, (Dtype) 1.0, input_blob->mutable_cpu_diff() + v_ind, count_in/n);
+	    for (int i = start_ind; i <= end_ind; ++i) {
+		layers_[i]->ForwardJv(bottom_vecs_[i], top_vecs_[i]);
+	    }
+	    break;
+	case Caffe::GPU:
+	    #ifndef CPU_ONLY
+	    caffe_gpu_set(count_in, (Dtype) 0.0, input_blob->mutable_gpu_diff());
+	    caffe_gpu_strided_set(count_in, (Dtype) 1.0, input_blob->mutable_gpu_diff() + v_ind, count_in/n);
+	    for (int i = start_ind; i <= end_ind; ++i) {
+		layers_[i]->ForwardJv(bottom_vecs_[i], top_vecs_[i]);
+	    }
+	    #else
+	    NO_GPU;
+	    #endif
+	    break;
+    }
+}
+
+template <typename Dtype>
 const vector<Blob<Dtype>*>& Net<Dtype>::Forward(
     const vector<Blob<Dtype>*> & bottom, Dtype* loss) {
   LOG_EVERY_N(WARNING, 1000) << "DEPRECATED: Forward(bottom, loss) "

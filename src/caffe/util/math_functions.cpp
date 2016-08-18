@@ -68,6 +68,16 @@ template void caffe_set<int>(const int N, const int alpha, int* Y);
 template void caffe_set<float>(const int N, const float alpha, float* Y);
 template void caffe_set<double>(const int N, const double alpha, double* Y);
 
+template <typename Dtype>
+void caffe_strided_set(const int N, const Dtype alpha, Dtype* Y, const int inc) {
+  for (int i = 0; i < N; i = i + inc) {
+    Y[i] = alpha;
+  }
+}
+
+template void caffe_strided_set<float>(const int N, const float alpha, float* Y, const int inc);
+template void caffe_strided_set<double>(const int N, const double alpha, double* Y, const int inc);
+
 template <>
 void caffe_add_scalar(const int N, const float alpha, float* Y) {
   for (int i = 0; i < N; ++i) {

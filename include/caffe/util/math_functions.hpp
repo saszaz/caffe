@@ -39,6 +39,9 @@ void caffe_copy(const int N, const Dtype *X, Dtype *Y);
 template <typename Dtype>
 void caffe_set(const int N, const Dtype alpha, Dtype *X);
 
+template <typename Dtype>
+void caffe_strided_set(const int N, const Dtype alpha, Dtype *X, const int inc);
+
 inline void caffe_memset(const size_t N, const int alpha, void* X) {
   memset(X, alpha, N);  // NOLINT(caffe/alt_fn)
 }
@@ -170,6 +173,9 @@ void caffe_gpu_memcpy(const size_t N, const void *X, void *Y);
 
 template <typename Dtype>
 void caffe_gpu_set(const int N, const Dtype alpha, Dtype *X);
+
+template <typename Dtype>
+void caffe_gpu_strided_set(const int N, const Dtype alpha, Dtype *X, const int inc);
 
 inline void caffe_gpu_memset(const size_t N, const int alpha, void* X) {
 #ifndef CPU_ONLY
