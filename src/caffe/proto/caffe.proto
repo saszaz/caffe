@@ -403,6 +403,8 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
+  
+  optional FlowWarpingParameter flow_warping_param = 9999;
 }
 
 // Message that stores parameters used to apply transformation
@@ -1396,4 +1398,8 @@ message PReLUParameter {
   optional FillerParameter filler = 1;
   // Whether or not slope paramters are shared across channels.
   optional bool channel_shared = 2 [default = false];
+}
+
+message FlowWarpingParameter {
+  optional float scale = 1 [default = 1.0];
 }
