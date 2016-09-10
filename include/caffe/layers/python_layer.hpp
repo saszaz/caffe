@@ -49,6 +49,11 @@ class PythonLayer : public Layer<Dtype> {
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
     self_.attr("backward")(top, propagate_down, bottom);
   }
+  
+  virtual void ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {
+    self_.attr("forward_jv")(top, bottom);
+  }
 
  private:
   bp::object self_;

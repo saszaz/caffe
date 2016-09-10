@@ -266,7 +266,7 @@ def main():
 				
     #train_datalayer_param = dict(load_nn=True, batch_size=128, db_root='/nethome/ashaban6/caffe/ekf/data/data_ntot_823543', nn_root='/nethome/ashaban6/caffe/ekf/data/data_ntot_823543_sample_150k', num_threads=6, im_shape=[256, 256], nn_query_size=20, shuffle=True)
     #test_datalayer_param = dict(load_nn=True, batch_size=1, db_root='/nethome/ashaban6/caffe/ekf/data/data_ntot_823543', nn_root='/nethome/ashaban6/caffe/ekf/data/data_ntot_823543_sample_150k', num_threads=1, im_shape=[256, 256], nn_query_size=1, shuffle=False)
-    name = 'chair'
+    name = 'flow'
     
     train_datalayer_param = dict(load_nn=False, batch_size=128, db_root='/nethome/ashaban6/caffe/ekf/data/db_train', nn_root='/nethome/ashaban6/caffe/ekf/data/db_train', num_threads=6, im_shape=[128, 128], nn_shape=[128, 128], nn_query_size=100, shuffle=True, hist_eq=True)
     test_datalayer_param = dict(load_nn=False, batch_size=1, db_root='/nethome/ashaban6/caffe/ekf/data/db_test', nn_root='/nethome/ashaban6/caffe/ekf/data/db_train', num_threads=1, im_shape=[128, 128], nn_shape=[128, 128], nn_query_size=1, shuffle=False,hist_eq=False)

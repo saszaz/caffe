@@ -134,11 +134,11 @@ def _Net_forwardJ(self, start, end, bottom, top):
     try:
         top_ind = list(top_inds).index(self.blobs.keys().index(top))
     except:
-        raise Exception('End layer ' + end + ' doesnt have top ' + top) 
+        raise Exception('End layer ' + end + ' doesn\'t have top ' + top) 
     try:
         bottom_ind = list(bottom_inds).index(self.blobs.keys().index(bottom))
     except:
-        raise Exception('Start layer ' + start + ' doesnt have bottom ' + bottom)
+        raise Exception('Start layer ' + start + ' doesn\'t have bottom ' + bottom)
     	
     n = self.blobs[bottom].data.shape[0]
     n_in = reduce(lambda x, y: x*y, self.blobs[bottom].data.shape[1:])

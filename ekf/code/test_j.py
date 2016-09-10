@@ -4,34 +4,19 @@
 
 import sys
 import time
-
-# 1) remove old caffe from python path
-if '/home/amir/caffe/python' in sys.path:
-    sys.path.remove('/home/amir/caffe/python')
-
-# 2) add new caffe to the python path
-sys.path.append('/home/amir/codes/clones/caffe/python/')
-
-# 3) add $NEW_CAFFE/ekf folder to the python path
-# It is only required if you want to compair ForwardJv with BackwardJv
-sys.path.append('/home/amir/codes/clones/caffe/ekf')
-
-
 import caffe
 import numpy as np
 
 
 # 4) set parameters
 ######################################
-model = './deploy.prototxt'
-
+model = '../test_flow.prototxt'
+weights = '../snapshot/real_flow128_dof4_iter_40000.caffemodel'
 #From input (layer, bottom)
-start = 'fc1'
-bottom = 'label'
+start = 'split_jp';bottom = 'jp'
 
 #To output (layer, top)
-end = 'eltwise'
-top = 'segm_img'
+end = 'pred';top = 'pred'
 
 seed = 1234323
 inc = 1000
@@ -42,7 +27,7 @@ net = caffe.Net(model, weights, caffe.TEST)
 caffe.set_mode_gpu()
 
 np.random.seed(seed)
-net.blobs['label'].data[...] = np.random.uniform(low=-1.0, high=1.0, size=net.blobs['label'].data.shape)
+net.blobs['jp'].data[...] = np.random.uniform(low=-1.0, high=1.0, size=net.blobs['jp'].data.shape)
 
 
 

@@ -1,0 +1,30 @@
+layer {
+  name: "img"
+  type: "Python"
+  top: "img"
+  top: "seg"
+  top: "jp"
+  top: "nn_img"
+  top: "nn_seg"
+  top: "nn_jp"
+  python_param {
+    module: "ekf_datalayer"
+    layer: "EKFDataLayer"
+    param_str: "{\'num_threads\': 1, \'shuffle\': True, \'nn_shape\': [128, 128], \'nn_query_size\': 1, \'im_shape\': [128, 128], \'load_nn\': True, \'batch_size\': 1, \'hist_eq\': False, \'db_root\': \'/media/amir/e9c67193-3b47-4664-aee1-b5615aff6835/ekf_data/db_test\', \'nn_root\': \'/media/amir/e9c67193-3b47-4664-aee1-b5615aff6835/ekf_data/db_train\'}"
+  }
+}
+
+layer {
+  name: "nn_layer"
+  type: "Python"
+  bottom: "jp"
+  top: "nn_img_2"
+  top: "nn_seg_2"
+  top: "nn_jp_2"
+  top: "nn_w_2"
+  python_param {
+    module: "ekf_nnlayer"
+    layer: "EKFNNLayer"
+    param_str: "{\'nn_shape\': [128, 128], \'nn_query_size\': 1, \'nn_root\': \'/media/amir/e9c67193-3b47-4664-aee1-b5615aff6835/ekf_data/db_train\'}"
+  }
+}

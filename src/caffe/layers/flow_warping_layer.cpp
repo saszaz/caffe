@@ -51,6 +51,12 @@ void FlowWarpingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   NOT_IMPLEMENTED;
 }
 
+template <typename Dtype>
+void FlowWarpingLayer<Dtype>::ForwardJv_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {
+  NOT_IMPLEMENTED;
+}
+
 #ifdef CPU_ONLY
 STUB_GPU(FlowWarpingLayer);
 #endif
