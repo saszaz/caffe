@@ -56,5 +56,5 @@ class EKFNNLayer(caffe.Layer):
     
     def forward_jv(self, top, bottom):
 	for top_id in range(self.params.nn_num * 4):
-	    top[top_id].data[...] = 0
+	    top[top_id].diff[...] = 0
 	

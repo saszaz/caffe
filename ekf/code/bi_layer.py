@@ -9,6 +9,7 @@ class BILayer(caffe.Layer):
 	self.v = 0
 	params = eval(self.param_str)
 	self.inc = params['inc']
+	top[0].reshape(bottom[0].data.shape[0], 1)
 	pass
     def forward(self, bottom, top):
 	pass

@@ -23,11 +23,11 @@ inc = 1000
 ######################################
 
 
-net = caffe.Net(model, weights, caffe.TEST)
+net = caffe.Net(model, weights, caffe.TRAIN)
 caffe.set_mode_gpu()
 
 np.random.seed(seed)
-net.blobs['jp'].data[...] = np.random.uniform(low=-1.0, high=1.0, size=net.blobs['jp'].data.shape)
+net.blobs['jp'].data[...] = [ 0.93991798, -0.64318699, -0.76494998,  0.174068  ,  0.34140101, 0.76570898,  0.64409   ,  0.984734  ]
 
 
 

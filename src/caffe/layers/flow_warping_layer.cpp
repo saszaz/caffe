@@ -37,6 +37,9 @@ void FlowWarpingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom, const 
   ptrs_blob_.Reshape(size_ptrs);
   
   top[0]->ReshapeLike(*bottom[0]);
+  
+  
+  temp_forwardj_blob_.Reshape(1, channels_, height_, width_);
 }
 
 template <typename Dtype>

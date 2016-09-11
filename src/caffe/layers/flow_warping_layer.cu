@@ -266,7 +266,6 @@ void FlowWarpingLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
         		      count, (Dtype) 1.0 , count * 4, partial_i, indices, ptrs,
         		      input_im, (Dtype) 0.0, im_diff, CblasColMajor);
 
-
         //disp_{0}' = sum(z' .* top_diff, 0) 
         caffe_gpu_mul(count * channels_, im_diff, top_diff, im_diff);
         
@@ -283,14 +282,13 @@ void FlowWarpingLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
         caffe_gpu_mul(count * channels_, im_diff, top_diff, im_diff);
         caffe_gpu_gemm(CblasTrans, CblasNoTrans, count, 1, channels_,
         		(Dtype) 1.0, im_diff, scale_vector, (Dtype) 0.0, disp_diff + count);
-        
       }
       
       //out = in * A^t ==> in' = out' * A = (A^t * out'^t)^t
-  	  tracker_gpu_csr_gemm_cusparse(CblasTrans, CblasTrans, count, channels_,
-            count, (Dtype) 1.0 , count * 4, interp_coefs, indices, ptrs,
-            top_diff, (Dtype) 0.0, im_diff,
-            CblasColMajor);      
+      tracker_gpu_csr_gemm_cusparse(CblasTrans, CblasTrans, count, channels_,
+			count, (Dtype) 1.0 , count * 4, interp_coefs, indices, ptrs,
+			top_diff, (Dtype) 0.0, im_diff,
+			CblasColMajor);      
                 
       top_diff += count * channels_;
       im_diff += count * channels_;
@@ -309,62 +307,61 @@ template <typename Dtype>
 void FlowWarpingLayer<Dtype>::ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   
-  const Dtype* im_jv_data = bottom[0]->gpu_diff();
-  const Dtype* disp_jv_data = bottom[0]->gpu_diff();
-  Dtype* top_jv_data = top[0]->mutable_gpu_diff();
+ const Dtype* im_jv_data = bottom[0]->gpu_diff();
+ const Dtype* disp_jv_data = bottom[1]->gpu_diff();
+ Dtype* top_jv_data = top[0]->mutable_gpu_diff();
   
   
-  Dtype* temp = bottom[0]->mutable_gpu_diff();
+ Dtype* temp = temp_forwardj_blob_.mutable_gpu_diff();
   
   
-  const Dtype* input_im = bottom[0]->gpu_data();
-  const Dtype* partial_i = partial_i_blob_.gpu_data();
-  const Dtype* partial_j = partial_j_blob_.gpu_data();
-  const Dtype* interp_coefs = interp_coefs_blob_.gpu_data();
-  const int* indices = indices_blob_.gpu_data();
-  const int* ptrs = ptrs_blob_.gpu_data();
-  const int count = width_ * height_;
+ const Dtype* input_im = bottom[0]->gpu_data();
+ const Dtype* partial_i = partial_i_blob_.gpu_data();
+ const Dtype* partial_j = partial_j_blob_.gpu_data();
+ const Dtype* interp_coefs = interp_coefs_blob_.gpu_data();
+ const int* indices = indices_blob_.gpu_data();
+ const int* ptrs = ptrs_blob_.gpu_data();
+ const int count = width_ * height_;
   
-  for(int i = 0; i < top[0]->num(); i++) {
+ for(int i = 0; i < top[0]->num(); i++) {
+     //Let z' = d out_{c,i,j}/d disp_{0, i,j}: 
+     //z' = input_im * partial_i^t = (partial_i * input_im^t)^t
+     tracker_gpu_csr_gemm_cusparse(CblasNoTrans, CblasTrans, count, channels_,
+		count, (Dtype) 1.0 , count * 4, partial_i, indices, ptrs, 
+		input_im, (Dtype) 0.0, temp, CblasColMajor);
+     
+     for(int k = 0; k < channels_; k++) {
+	caffe_gpu_mul(count, temp + k * count, disp_jv_data, top_jv_data + k * count);
+     }
+      
+     //The same steps for disp_{1} then add the result to top_jv_data
+     tracker_gpu_csr_gemm_cusparse(CblasNoTrans, CblasTrans, count, channels_,
+       	count, (Dtype) 1.0 , count * 4, partial_j, indices, ptrs,
+       	input_im, (Dtype) 0.0, temp, CblasColMajor);
 
-      //Let z' = d out_{c,i,j}/d disp_{0, i,j}: 
-      //z' = input_im * partial_i^t = (partial_i * input_im^t)^t
-      tracker_gpu_csr_gemm_cusparse(CblasNoTrans, CblasTrans, count, channels_,
-		count, (Dtype) 1.0 , count * 4, partial_i, indices, ptrs,
-        	input_im, (Dtype) 0.0, temp, CblasColMajor);
+     for(int k = 0; k < channels_; k++) {
+	 caffe_gpu_mul(count, temp + k * count, disp_jv_data + count, temp + k * count);
+     }
       
-      caffe_gpu_mul(count, temp + 0 * count, disp_jv_data, top_jv_data + 0 * count);
-      caffe_gpu_mul(count, temp + 1 * count, disp_jv_data, top_jv_data + 1 * count);
-      caffe_gpu_mul(count, temp + 2 * count, disp_jv_data, top_jv_data + 2 * count);
-      
-      //The same steps for disp_{1} then add the result to top_jv_data
-      tracker_gpu_csr_gemm_cusparse(CblasNoTrans, CblasTrans, count, channels_,
-        	count, (Dtype) 1.0 , count * 4, partial_j, indices, ptrs,
-        	input_im, (Dtype) 0.0, temp, CblasColMajor);
-      
-      caffe_gpu_mul(count, temp + 0 * count, disp_jv_data, temp + 0 * count);
-      caffe_gpu_mul(count, temp + 1 * count, disp_jv_data, temp + 1 * count);
-      caffe_gpu_mul(count, temp + 2 * count, disp_jv_data, temp + 2 * count);
-      
-      caffe_gpu_axpby(count * channels_, scale_, temp, scale_, top_jv_data);
+     caffe_gpu_axpby(count * channels_, scale_, temp, scale_, top_jv_data);
  
-      //top_jv_data = im_jv_data * A^t = (A * in^t)^t
-      tracker_gpu_csr_gemm_cusparse(CblasNoTrans, CblasTrans, count, channels_,
+     //top_jv_data = im_jv_data * A^t = (A * in^t)^t
+     tracker_gpu_csr_gemm_cusparse(CblasNoTrans, CblasTrans, count, channels_,
 		count, (Dtype) 1.0, count * 4, interp_coefs, indices, ptrs,
 		im_jv_data, (Dtype) 1.0, top_jv_data, CblasColMajor);
       
       
-      top_jv_data += count * channels_;
-      im_jv_data += count * channels_;
-      disp_jv_data += count * 2;
+     top_jv_data += count * channels_;
+     im_jv_data += count * channels_;
+     disp_jv_data += count * 2;
       
-      input_im += count * channels_;
-      partial_i += count * 4;
-      partial_j += count * 4;
-      interp_coefs += count * 4;
-      indices += count * 4;
-      ptrs += count + 1;
-  }	
+     input_im += count * channels_;
+     partial_i += count * 4;
+     partial_j += count * 4;
+     interp_coefs += count * 4;
+     indices += count * 4;
+     ptrs += count + 1;
+ }	
 }
 
 INSTANTIATE_LAYER_GPU_FORWARDJV(FlowWarpingLayer);

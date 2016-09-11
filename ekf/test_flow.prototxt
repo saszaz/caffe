@@ -539,3 +539,17 @@ layer {
     scale: 10.0
   }
 }
+
+
+layer {
+  name: "bi"
+  type: "Python"
+  bottom: "pred"
+  top: "loss"
+  python_param {
+    module: "bi_layer"
+    layer: "BILayer"
+    param_str: "{\'inc\': 1000}"
+  }
+  loss_weight: 1.0
+}
