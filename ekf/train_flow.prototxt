@@ -1,44 +1,32 @@
-input: "jp"
-input_shape: {dim: 1 dim: 8}
-force_backward:true
-
 layer {
-  name: "split_jp"
-  type: "Split"
-  bottom: "jp"
-  top: "jp_1"
-  top: "jp_2"
-}
-
-layer {
-  name: "nn_layer"
+  name: "img"
   type: "Python"
-  bottom: "jp_1"
+  top: "img"
+  top: "seg"
+  top: "jp"
   top: "nn_img"
   top: "nn_seg"
   top: "nn_jp"
-  top: "nn_w"
   python_param {
-    module: "ekf_nnlayer"
-    layer: "EKFNNLayer"
-    param_str: "{\'nn_shape\': [128, 128], \'nn_query_size\': 100, \'nn_root\': \'/media/amir/e9c67193-3b47-4664-aee1-b5615aff6835/ekf_data/db_train\'}"
+    module: "ekf_layer"
+    layer: "EKFDataLayer"
+    param_str: "{\'num_threads\': 6, \'shuffle\': True, \'nn_shape\': [128, 128], \'nn_query_size\': 100, \'im_shape\': [128, 128], \'load_nn\': False, \'batch_size\': 128, \'hist_eq\': True, \'db_root\': \'/nethome/ashaban6/caffe/ekf/data/db_train\', \'nn_root\': \'/nethome/ashaban6/caffe/ekf/data/db_train\'}"
   }
 }
-
+layer {
+  name: "silence_seg"
+  type: "Silence"
+  bottom: "seg"
+}
 layer {
   name: "silence_nn_seg"
   type: "Silence"
   bottom: "nn_seg"
 }
 layer {
-  name: "silence_nn_w"
-  type: "Silence"
-  bottom: "nn_w"
-}
-layer {
   name: "fc1"
   type: "InnerProduct"
-  bottom: "jp_2"
+  bottom: "jp"
   top: "fc1"
   param {
     lr_mult: 1
@@ -537,16 +525,11 @@ layer {
     scale: 10.0
   }
 }
-
 layer {
-  name: "bi"
-  type: "Python"
+  name: "img_loss"
+  type: "EuclideanLoss"
   bottom: "pred"
-  top: "loss"
-  python_param {
-    module: "bi_layer"
-    layer: "BILayer"
-    param_str: "{\'inc\': 1000}"
-  }
+  bottom: "img"
+  top: "img_loss"
   loss_weight: 1.0
 }

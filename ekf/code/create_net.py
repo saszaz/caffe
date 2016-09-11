@@ -224,7 +224,7 @@ def create_net(net_info):
     n = caffe.NetSpec()
     if net_info['name'] == 'chair':
 	#Datalayer
-	n.img, n.seg, n.jp = L.Python(module='ekf_layer', layer='EKFDataLayer', ntop=3, param_str=str(net_info['datalayer_param']))
+	n.img, n.seg, n.jp = L.Python(module='ekf_datalayer', layer='EKFDataLayer', ntop=3, param_str=str(net_info['datalayer_param']))
 	n.silence_seg = L.Silence(n.seg, ntop=0)
 	create_inner(n, n.jp, None, None, ip_filler, ip_param)
 	pimg, psegm = create_deconv(net_info, n, n.reshape, deconv_filler, conv_filler, deconv_param, conv_param, 3)
@@ -232,7 +232,7 @@ def create_net(net_info):
 	n.img_loss = L.EuclideanLoss(pimg, n.img, loss_weight = 1.0)
     elif net_info['name'] == 'flow':
 	#Datalayer
-	n.img, n.seg, n.jp, n.nn_img, n.nn_seg, n.nn_jp = L.Python(module='ekf_layer', layer='EKFDataLayer', ntop=6, param_str=str(net_info['datalayer_param']))
+	n.img, n.seg, n.jp, n.nn_img, n.nn_seg, n.nn_jp = L.Python(module='ekf_datalayer', layer='EKFDataLayer', ntop=6, param_str=str(net_info['datalayer_param']))
 	n.silence_seg = L.Silence(n.seg, ntop=0)
 	n.silence_nn_seg = L.Silence(n.nn_seg, ntop=0)
 	
@@ -248,7 +248,7 @@ def create_net(net_info):
 	if net_info['predict_seg']:
 	    n.msk_loss = L.SoftmaxWithLoss(psegm, n.seg, loss_weight = 10.0)
     elif net_info['name'] == 'coupled':
-	n.img, n.seg, n.jp, n.nn_img_64, n.nn_seg_64, n.nn_img_128, n.nn_seg_128, n.nn_jp = L.Python(module='ekf_layer', layer='EKFDataLayer', ntop=8, param_str=str(net_info['datalayer_param']))
+	n.img, n.seg, n.jp, n.nn_img_64, n.nn_seg_64, n.nn_img_128, n.nn_seg_128, n.nn_jp = L.Python(module='ekf_datalayer', layer='EKFDataLayer', ntop=8, param_str=str(net_info['datalayer_param']))
 	n.silence_seg = L.Silence(n.seg, ntop=0)
 	n.silence_nn_seg_64 = L.Silence(n.nn_seg_64, ntop=0)
 	n.silence_nn_seg_128 = L.Silence(n.nn_seg_128, ntop=0)

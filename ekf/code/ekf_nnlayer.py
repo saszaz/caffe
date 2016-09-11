@@ -10,12 +10,12 @@ class EKFNNLayer(caffe.Layer):
                 nn_shape=None,
                 nn_query_size=1,
                 nn_num=1,
-                hist_eq=False,
-                nn_db_size=np.inf)
+                nn_db_size=np.inf,
+                nn_ignore=1)
 	
 	self.params = Map(params)
 	self.nn_db = DartDB(self.params.nn_root)
-	self.nn = NN(self.nn_db)
+	self.nn = NN(self.nn_db, self.params.nn_db_size, self.params.nn_ignore)
 	assert self.params.nn_num <= self.params.nn_query_size
 	
     def reshape(self, bottom, top):

@@ -38,11 +38,11 @@ class DataLoader(object):
 	
 	self.im_shape = params['im_shape']
 	self.load_nn = params['load_nn']
-	self.nn_db_size = params['nn_db_size']
 	self.nn_query_size = params['nn_query_size']
 	if self.load_nn:
 	    self.nn_db = nn_db
-	    self.nn = NN(nn_db)
+	    nn_ignore = 1 if db.db_root == nn_db.db_root else 0
+	    self.nn = NN(nn_db, params['nn_db_size'], nn_ignore)
    
     def load_next_data(self):
 	nid = self.get_next_id()

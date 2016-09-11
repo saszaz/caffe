@@ -76,6 +76,10 @@ class DartDB:
     #reads data and initialize self.jps, self.img_paths, self.length
     def init_db(self):
 	self.jps = np.genfromtxt(osp.join(self.db_root, 'joints.txt'), delimiter=',')
+	try:
+	    self.dym_data = np.genfromtxt(osp.join(self.db_root, 'dym_data.txt'), delimiter=',')
+	except:
+	    pass
 	self.img_paths = [f for f in os.listdir(self.db_root) if f.startswith('fr_') and f.endswith('.png')]
 	img_nums = np.array([int(f[3:-4]) for f in self.img_paths])
 	self.length = self.jps.shape[0]
@@ -142,8 +146,9 @@ class DartDB:
 	np.savetxt(osp.join(save_root, 'joints.txt'), self.jps, fmt='%1.6f', delimiter=', ')
     
 class NN:
-    def __init__(self, db, max_sample=np.inf):
+    def __init__(self, db, max_sample=np.inf, nn_ignore=1):
 	self.db = db
+	self.nn_ignore = nn_ignore
 	self.max_sample = max_sample
 	self.create_db()
 	
@@ -152,8 +157,8 @@ class NN:
 	self.kdtree = KDTree(data=self.db.jps[self.data_ids].copy())
 	
     def nn_ids(self, jp, nn = 1):
-	d, i = self.kdtree.query(jp, k=nn+1, eps=0, p=2)
-	return self.data_ids[i[1:].squeeze()]
+	d, i = self.kdtree.query(jp, k=nn+self.nn_ignore, eps=0, p=2)
+	return self.data_ids[i[self.nn_ignore:].squeeze()]
 
 class Map(dict):
     """
