@@ -77,7 +77,7 @@ class DartDB:
     def init_db(self):
 	self.jps = np.genfromtxt(osp.join(self.db_root, 'joints.txt'), delimiter=',')
 	try:
-	    self.dym_data = np.genfromtxt(osp.join(self.db_root, 'dym_data.txt'), delimiter=',')
+	    self.dyn_data = np.genfromtxt(osp.join(self.db_root, 'dyn_data.txt'), delimiter=',')
 	except:
 	    pass
 	self.img_paths = [f for f in os.listdir(self.db_root) if f.startswith('fr_') and f.endswith('.png')]
