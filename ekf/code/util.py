@@ -20,6 +20,10 @@ def cprint(string, style = None):
     else:
 	print style + str(string) + bcolors.ENDC
 
+class ImageFormatException(Exception):
+    def __init__(self, e):
+	self.e = e
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -93,7 +97,10 @@ class DartDB:
 	img = imread(osp.join(self.db_root, img_path))
 	img = img_as_float(img)
 	if not (img.max() <= 1.0 and img.min() >= 0 and len(img.shape) == 3 and img.shape[2] == 3):
-	    raise Exception('Image has a wrong format: ' + osp.join(self.db_root, img_path))
+	    print img.max(), img.min(), img.shape
+	    e = Exception('Image has a wrong format: ' + osp.join(self.db_root, img_path))
+	    raise ImageFormatException(e)
+	    
 	if size is None or not hasattr(size[0], '__len__'): 
 	    images = (resize_img(img, size),)
 	else:
@@ -119,14 +126,28 @@ class DartDB:
 	return img
     
     def sample(self, max_sample=np.inf):
+	data_ids = np.array(random.sample(np.arange(self.length), min(max_sample, self.length)), dtype='int')
+	return self.__sample(data_ids)
+    
+    def split(self, set_size=None):
+	assert sum(set_size) == self.length
+	piv = np.concatenate(([0], np.cumsum(set_size)))
+	dbs = []
+	for i in xrange(len(set_size)):
+	    sample_ids = range(piv[i], piv[i+1])
+	    dbs.append(self.__sample(sample_ids))
+	return dbs
+
+    def __sample(self, sample_ids):
 	db = DartDB()
 	db.db_root = self.db_root
-	data_ids = np.array(random.sample(np.arange(self.length), min(max_sample, self.length)), dtype='int')
-	db.jps = self.jps[data_ids]
-	db.img_paths = [self.img_paths[i] for i in data_ids]
-	db.length = len(data_ids)
+	db.jps = self.jps[sample_ids]
+	if hasattr(self, 'dym_data'):
+	    db.dym_data = self.dym_data
+	db.img_paths = [self.img_paths[i] for i in sample_ids]
+	db.length = len(sample_ids)
 	return db
-	    
+    
     def save(self, save_root, size = None):
 	os.makedirs(save_root)
 	try:
@@ -143,7 +164,7 @@ class DartDB:
 	    else:
 		jp, img = self.read_instance(i, size, False);
 		imsave(dst, img[0])
-	np.savetxt(osp.join(save_root, 'joints.txt'), self.jps, fmt='%1.6f', delimiter=', ')
+	np.savetxt(osp.join(save_root, 'joints.txt'), self.jps, fmt='%1.10f', delimiter=', ')
     
 class NN:
     def __init__(self, db, max_sample=np.inf, nn_ignore=1):
@@ -158,8 +179,11 @@ class NN:
 	
     def nn_ids(self, jp, nn = 1):
 	d, i = self.kdtree.query(jp, k=nn+self.nn_ignore, eps=0, p=2)
-	return self.data_ids[i[self.nn_ignore:].squeeze()]
-
+	if hasattr(i, '__len__'):
+	    return self.data_ids[i[self.nn_ignore:].squeeze()]
+	else:
+	    assert (nn + self.nn_ignore) == 1
+	    return self.data_ids[i]
 class Map(dict):
     """
     Example:

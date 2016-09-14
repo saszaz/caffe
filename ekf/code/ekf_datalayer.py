@@ -2,8 +2,9 @@ import caffe
 import numpy as np
 import random
 from multiprocessing import Process, Queue, Lock
-from util import check_params, NN, DartDB, shape_str, correct_hist
+from util import check_params, NN, DartDB, shape_str, correct_hist, ImageFormatException
 import scipy as sp
+import sys, traceback
 
 class DataLoaderProcess(Process):
     def __init__(self, name=None, args=(), kwargs=None):
@@ -14,8 +15,12 @@ class DataLoaderProcess(Process):
     def run(self):
 	try:
 	    while True:
-		item = self.loader.load_next_data()
-		self.queue.put(item)
+		try:
+		    item = self.loader.load_next_data()
+		    self.queue.put(item)
+		except ImageFormatException as e:
+		    print 'I0913 21:37:16.779006 20177 ekf_datalayer.py] ' + str(e)
+		    pass
 	except Exception as e:
 	    self.queue.put(None)
 	    print str("".join(traceback.format_exception(*sys.exc_info())))
@@ -41,7 +46,8 @@ class DataLoader(object):
 	self.nn_query_size = params['nn_query_size']
 	if self.load_nn:
 	    self.nn_db = nn_db
-	    nn_ignore = 1 if db.db_root == nn_db.db_root else 0
+	    #nn_ignore = 1 if db.db_root == nn_db.db_root else 0
+	    nn_ignore = 0
 	    self.nn = NN(nn_db, params['nn_db_size'], nn_ignore)
    
     def load_next_data(self):

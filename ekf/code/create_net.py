@@ -3,37 +3,53 @@ import caffe
 from caffe import layers as L, params as P
 import util
 
-def create_conv(n, conv_filler, conv_param, engine=P.Convolution.CAFFE):
+def create_conv(n, conv_filler, conv_param, num_output, ip_filler, ip_param, engine=P.Convolution.CAFFE):
     conv_args = dict()
     conv_args.update(conv_filler)
     conv_args.update(conv_param)
+
+    ip_args = dict()
+    ip_args.update(ip_filler)
+    ip_args.update(ip_param)
     
     #Conv relu max 1
-    n.conv1_1 = L.Convolution(n.nn_img, kernel_size=3, pad=0,num_output=48, engine=engine,**conv_args)
+    #256x256
+    n.conv1_1 = L.Convolution(n.img, kernel_size=3, pad=0,num_output=64, engine=engine,**conv_args)
     n.conv1_1_relu = L.ReLU(n.conv1_1, in_place=True)
     n.pool1 = L.Pooling(n.conv1_1_relu, pool=P.Pooling.MAX, kernel_size=2, stride=2)
     
     #Conv relu max 2
-    n.conv2_1 = L.Convolution(n.pool1, kernel_size=3, pad=0,num_output=92, engine=engine,**conv_args)
+    #128x128
+    n.conv2_1 = L.Convolution(n.pool1, kernel_size=3, pad=0,num_output=128, engine=engine,**conv_args)
     n.conv2_1_relu = L.ReLU(n.conv2_1, in_place=True)
     n.pool2 = L.Pooling(n.conv2_1_relu, pool=P.Pooling.MAX, kernel_size=2, stride=2)
     
     #Conv relu max 3
+    #64x64
     n.conv3_1 = L.Convolution(n.pool2, kernel_size=3, pad=0,num_output=256, engine=engine,**conv_args)
     n.conv3_1_relu = L.ReLU(n.conv3_1, in_place=True)
     n.pool3 = L.Pooling(n.conv3_1_relu, pool=P.Pooling.MAX, kernel_size=2, stride=2)
     
     #Conv relu max 4
-    n.conv4_1 = L.Convolution(n.pool3, kernel_size=3, pad=0,num_output=256, engine=engine,**conv_args)
+    #32x32
+    n.conv4_1 = L.Convolution(n.pool3, kernel_size=3, pad=0,num_output=512, engine=engine,**conv_args)
     n.conv4_1_relu = L.ReLU(n.conv4_1, in_place=True)
     n.pool4 = L.Pooling(n.conv4_1_relu, pool=P.Pooling.MAX, kernel_size=2, stride=2)
     
     #Conv relu max 5
+    #16x16
     n.conv5_1 = L.Convolution(n.pool4, kernel_size=3, pad=0,num_output=512, engine=engine,**conv_args)
     n.conv5_1_relu = L.ReLU(n.conv5_1, in_place=True)
     n.pool5 = L.Pooling(n.conv5_1_relu, pool=P.Pooling.MAX, kernel_size=2, stride=2)
     
-    
+    #8x8
+    n.fc6 = L.InnerProduct(n.pool5, num_output=1024, **ip_args)
+    n.fc6_relu = L.ReLU(n.fc6, in_place=True)
+    n.fc7 = L.InnerProduct(n.fc6_relu, num_output=1024, **ip_args)
+    n.fc7_relu = L.ReLU(n.fc7, in_place=True)
+    n.fc8 = L.InnerProduct(n.fc7_relu, num_output=num_output, **ip_args)    
+    return n.fc8
+
 def create_inner(n, jp, nn_jp, nn_img, ip_filler, ip_param):
     
     ip_args = dict()
@@ -130,6 +146,17 @@ def create_deconv(net_info, n, input_top, deconv_filler, conv_filler, deconv_par
     n.conv8_1 = L.Convolution(n.deconv8_relu, kernel_size=3, pad=1,num_output=64, engine=engine,**conv_args)
     n.conv8_1_relu = L.ReLU(n.conv8_1, in_place=True)
     
+    pimg = None
+    psegm = None
+    if np.all(net_info['datalayer_param']['im_shape'] == [64, 64]):
+	#pimg, psegm
+	n.pimg_64 = L.Convolution(n.conv8_1_relu, kernel_size=3, pad=1,num_output=img_nout, engine=engine,**conv_args)
+	pimg = n.pimg_64
+	if net_info['predict_seg']:
+	    n.psegm_64 = L.Convolution(n.conv8_1_relu, kernel_size=3, pad=1,num_output=img_nout, engine=engine,**conv_args)
+	    psegm = n.psegm_64
+	return (pimg, psegm)
+    
     #Deconv Conv 9
     n.deconv9 = L.Deconvolution(n.conv8_1_relu, convolution_param=dict(pad=1,kernel_size=4, stride=2, num_output=32, **deconv_filler), **deconv_param)
     n.deconv9_relu = L.ReLU(n.deconv9, in_place=True)
@@ -138,32 +165,33 @@ def create_deconv(net_info, n, input_top, deconv_filler, conv_filler, deconv_par
     n.conv9_1_relu = L.ReLU(n.conv9_1, in_place=True)
     
     
-    pimg = None
-    psegm = None
     if np.all(net_info['datalayer_param']['im_shape'] == [128, 128]):
-	#pimg, pseg
+	#pimg, psegm
 	n.pimg_128 = L.Convolution(n.conv9_1_relu, kernel_size=3, pad=1,num_output=img_nout, engine=engine,**conv_args)
 	pimg = n.pimg_128
 	if net_info['predict_seg']:
 	    n.psegm_128 = L.Convolution(n.conv9_1_relu, kernel_size=3, pad=1,num_output=img_nout, engine=engine,**conv_args)
 	    psegm = n.psegm_128
-    elif np.all(net_info['datalayer_param']['im_shape'] == [256, 256]):
-	#Deconv Conv 9
-	n.deconv10 = L.Deconvolution(n.conv9_1_relu, convolution_param=dict(pad=1,kernel_size=4, stride=2, num_output=16, **deconv_filler), **deconv_param)
-	n.deconv10_relu = L.ReLU(n.deconv10, in_place=True)
+	return (pimg, psegm)
     
-	n.conv10_1 = L.Convolution(n.deconv10_relu, kernel_size=3, pad=1,num_output=16, engine=engine,**conv_args)
-	n.conv10_1_relu = L.ReLU(n.conv10_1, in_place=True)
+    #Deconv Conv 9
+    n.deconv10 = L.Deconvolution(n.conv9_1_relu, convolution_param=dict(pad=1,kernel_size=4, stride=2, num_output=16, **deconv_filler), **deconv_param)
+    n.deconv10_relu = L.ReLU(n.deconv10, in_place=True)
+    
+    n.conv10_1 = L.Convolution(n.deconv10_relu, kernel_size=3, pad=1,num_output=16, engine=engine,**conv_args)
+    n.conv10_1_relu = L.ReLU(n.conv10_1, in_place=True)
 	
-	#pimg, pseg
+    if np.all(net_info['datalayer_param']['im_shape'] == [256, 256]):	
+	#pimg, psegm
 	n.pimg_256 = L.Convolution(n.conv10_1_relu, kernel_size=3, pad=1,num_output=img_nout, engine=engine,**conv_args)
 	pimg = n.pimg_256
 	if net_info['predict_seg']:
 	    n.psegm_256 = L.Convolution(n.conv10_1_relu, kernel_size=3, pad=1,num_output=img_nout, engine=engine,**conv_args)
 	    psegm = n.psegm_256
-    else:
-	raise Exception('Unsupported Output Size!')
-    return (pimg, psegm)
+	return (pimg, psegm)
+    
+    raise Exception('Unsupported Output Size!')
+    
 
 def create_coupled_net(net_info, n, input_top, deconv_filler, conv_filler, deconv_param, conv_param, engine=P.Convolution.CAFFE):
     conv_args = dict()
@@ -225,11 +253,15 @@ def create_net(net_info):
     if net_info['name'] == 'chair':
 	#Datalayer
 	n.img, n.seg, n.jp = L.Python(module='ekf_datalayer', layer='EKFDataLayer', ntop=3, param_str=str(net_info['datalayer_param']))
-	n.silence_seg = L.Silence(n.seg, ntop=0)
+	if not net_info['predict_seg']:
+	    n.silence_seg = L.Silence(n.seg, ntop=0)
 	create_inner(n, n.jp, None, None, ip_filler, ip_param)
 	pimg, psegm = create_deconv(net_info, n, n.reshape, deconv_filler, conv_filler, deconv_param, conv_param, 3)
 	#Loss
-	n.img_loss = L.EuclideanLoss(pimg, n.img, loss_weight = 1.0)
+	n.img_loss = L.EuclideanLoss(pimg, n.img, loss_weight = 10.0)
+	
+	if net_info['predict_seg']:
+	    n.msk_loss = L.SoftmaxWithLoss(psegm, n.seg, loss_weight = 1000.0)
     elif net_info['name'] == 'flow':
 	#Datalayer
 	n.img, n.seg, n.jp, n.nn_img, n.nn_seg, n.nn_jp = L.Python(module='ekf_datalayer', layer='EKFDataLayer', ntop=6, param_str=str(net_info['datalayer_param']))
@@ -268,17 +300,19 @@ def main():
     #test_datalayer_param = dict(load_nn=True, batch_size=1, db_root='/nethome/ashaban6/caffe/ekf/data/data_ntot_823543', nn_root='/nethome/ashaban6/caffe/ekf/data/data_ntot_823543_sample_150k', num_threads=1, im_shape=[256, 256], nn_query_size=1, shuffle=False)
     name = 'flow'
     
-    train_datalayer_param = dict(load_nn=False, batch_size=128, db_root='/nethome/ashaban6/caffe/ekf/data/db_train', nn_root='/nethome/ashaban6/caffe/ekf/data/db_train', num_threads=6, im_shape=[128, 128], nn_shape=[128, 128], nn_query_size=100, shuffle=True, hist_eq=True)
-    test_datalayer_param = dict(load_nn=False, batch_size=1, db_root='/nethome/ashaban6/caffe/ekf/data/db_test', nn_root='/nethome/ashaban6/caffe/ekf/data/db_train', num_threads=1, im_shape=[128, 128], nn_shape=[128, 128], nn_query_size=1, shuffle=False,hist_eq=False)
+    train_datalayer_param = dict(load_nn=True, batch_size=128, db_root='/nethome/ashaban6/caffe/ekf/data/last_version/reald/db_train_1', nn_root='/nethome/ashaban6/caffe/ekf/data/last_version/reald/db_train_1', num_threads=6, im_shape=[256, 256], nn_shape=[256, 256], nn_query_size=10, shuffle=True, hist_eq=False)
+    test_datalayer_param = dict(load_nn=False, batch_size=1, db_root='/nethome/ashaban6/caffe/ekf/data/db_test', nn_root='/nethome/ashaban6/caffe/ekf/data/db_train', num_threads=1, im_shape=[256, 256], nn_shape=[256, 256], nn_query_size=1, shuffle=False,hist_eq=False)
     
+    #train_datalayer_param = dict(load_nn=False, batch_size=128, db_root='/nethome/ashaban6/caffe/ekf/data/last_version/data0_ntot_100k_random', num_threads=2, im_shape=[128, 128], shuffle=True, hist_eq=False)
+    #test_datalayer_param = dict(load_nn=False, batch_size=1, db_root='/nethome/ashaban6/caffe/ekf/data/db_test', nn_root='/nethome/ashaban6/caffe/ekf/data/db_train', num_threads=1, im_shape=[256, 256], nn_shape=[256, 256], nn_query_size=1, shuffle=False,hist_eq=False)
     #Create Train Network
     net_info = dict(name=name, predict_seg=False, datalayer_param=train_datalayer_param)
     net = create_net(net_info)
-    util.save_net('../train_' + net_info['name'] + '.prototxt', str(net.to_proto()))
+    util.save_net('../train_' + str(train_datalayer_param['im_shape'][0]) + '_' + net_info['name'] + '.prototxt', str(net.to_proto()))
     #Create Test Network
     net_info = dict(name=name, predict_seg=False, datalayer_param=test_datalayer_param)
     net = create_net(net_info)
-    util.save_net('../test_' + net_info['name'] + '.prototxt', str(net.to_proto()))
+    util.save_net('../test_' + str(test_datalayer_param['im_shape'][0]) + '_' + net_info['name'] + '.prototxt', str(net.to_proto()))
 
 if __name__ == '__main__':
     main()
