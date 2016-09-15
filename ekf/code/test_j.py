@@ -10,8 +10,8 @@ import numpy as np
 
 # 4) set parameters
 ######################################
-model = '../test_flow.prototxt'
-weights = '../snapshot/real_flow128_dof4_iter_40000.caffemodel'
+model = '../train_256_flow_branch.prototxt'
+weights = '../snapshot/flowr256_dof4_iter_7361.caffemodel'
 #From input (layer, bottom)
 start = 'split_jp';bottom = 'jp'
 
@@ -27,7 +27,7 @@ net = caffe.Net(model, weights, caffe.TRAIN)
 caffe.set_mode_gpu()
 
 np.random.seed(seed)
-net.blobs['jp'].data[...] = [ 0.93991798, -0.64318699, -0.76494998,  0.174068  ,  0.34140101, 0.76570898,  0.64409   ,  0.984734  ]
+net.blobs['jp'].data[...] = [ 0.93991798, -0.64318699, -0.76494998,  0.174068]
 
 
 

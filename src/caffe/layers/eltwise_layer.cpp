@@ -184,14 +184,17 @@ void EltwiseLayer<Dtype>::ForwardJv_cpu(const vector<Blob<Dtype>*>& bottom,
         caffe_div(count, top_data, bottom_data, diffs_data);
       }
       caffe_mul(count, bottom_jv_data, diffs_data, diffs_data);
+      caffe_add(count, diffs_data, top_jv_data, top_jv_data);
       break;
     case EltwiseParameter_EltwiseOp_SUM:
+	caffe_axpy(count, coeffs_[i], bottom_jv_data, top_jv_data);
+      break;
     case EltwiseParameter_EltwiseOp_MAX:
       NOT_IMPLEMENTED;
     default:
       LOG(FATAL) << "Unknown elementwise operation.";
     }
-  	caffe_add(count, diffs_data, top_jv_data, top_jv_data);
+    
   }
 }
 

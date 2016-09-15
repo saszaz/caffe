@@ -8,9 +8,9 @@ layer {
   top: "nn_seg"
   top: "nn_jp"
   python_param {
-    module: "ekf_layer"
+    module: "ekf_datalayer"
     layer: "EKFDataLayer"
-    param_str: "{\'num_threads\': 6, \'shuffle\': True, \'nn_shape\': [128, 128], \'nn_query_size\': 100, \'im_shape\': [128, 128], \'load_nn\': False, \'batch_size\': 128, \'hist_eq\': True, \'db_root\': \'/nethome/ashaban6/caffe/ekf/data/db_train\', \'nn_root\': \'/nethome/ashaban6/caffe/ekf/data/db_train\'}"
+    param_str: "{\'num_threads\': 6, \'shuffle\': True, \'nn_shape\': [256, 256], \'nn_query_size\': 100, \'im_shape\': [256, 256], \'load_nn\': False, \'batch_size\': 128, \'hist_eq\': True, \'db_root\': \'/nethome/ashaban6/caffe/ekf/data/db_train\', \'nn_root\': \'/nethome/ashaban6/caffe/ekf/data/db_train\'}"
   }
 }
 layer {
@@ -489,10 +489,76 @@ layer {
   top: "conv9_1"
 }
 layer {
-  name: "pimg_128"
-  type: "Convolution"
+  name: "deconv10"
+  type: "Deconvolution"
   bottom: "conv9_1"
-  top: "pimg_128"
+  top: "deconv10"
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 16
+    pad: 1
+    kernel_size: 4
+    stride: 2
+    weight_filler {
+      type: "msra"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.0
+    }
+  }
+}
+layer {
+  name: "deconv10_relu"
+  type: "ReLU"
+  bottom: "deconv10"
+  top: "deconv10"
+}
+layer {
+  name: "conv10_1"
+  type: "Convolution"
+  bottom: "deconv10"
+  top: "conv10_1"
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 16
+    pad: 1
+    kernel_size: 3
+    weight_filler {
+      type: "msra"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.0
+    }
+    engine: CAFFE
+  }
+}
+layer {
+  name: "conv10_1_relu"
+  type: "ReLU"
+  bottom: "conv10_1"
+  top: "conv10_1"
+}
+layer {
+  name: "pimg_256"
+  type: "Convolution"
+  bottom: "conv10_1"
+  top: "pimg_256"
   param {
     lr_mult: 1
     decay_mult: 0
@@ -519,10 +585,10 @@ layer {
   name: "pred"
   type: "FlowWarping"
   bottom: "nn_img"
-  bottom: "pimg_128"
+  bottom: "pimg_256"
   top: "pred"
   flow_warping_param {
-    scale: 10.0
+    scale: 20.0
   }
 }
 layer {

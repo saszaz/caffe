@@ -298,13 +298,14 @@ def main():
 				
     #train_datalayer_param = dict(load_nn=True, batch_size=128, db_root='/nethome/ashaban6/caffe/ekf/data/data_ntot_823543', nn_root='/nethome/ashaban6/caffe/ekf/data/data_ntot_823543_sample_150k', num_threads=6, im_shape=[256, 256], nn_query_size=20, shuffle=True)
     #test_datalayer_param = dict(load_nn=True, batch_size=1, db_root='/nethome/ashaban6/caffe/ekf/data/data_ntot_823543', nn_root='/nethome/ashaban6/caffe/ekf/data/data_ntot_823543_sample_150k', num_threads=1, im_shape=[256, 256], nn_query_size=1, shuffle=False)
-    name = 'flow'
+    name = 'chair'
     
-    train_datalayer_param = dict(load_nn=True, batch_size=128, db_root='/nethome/ashaban6/caffe/ekf/data/last_version/reald/db_train_1', nn_root='/nethome/ashaban6/caffe/ekf/data/last_version/reald/db_train_1', num_threads=6, im_shape=[256, 256], nn_shape=[256, 256], nn_query_size=10, shuffle=True, hist_eq=False)
+    #train_datalayer_param = dict(load_nn=True, batch_size=128, db_root='/nethome/ashaban6/caffe/ekf/data/last_version/reald/db_train_1', nn_root='/nethome/ashaban6/caffe/ekf/data/last_version/reald/db_train_1', num_threads=6, im_shape=[256, 256], nn_shape=[256, 256], nn_query_size=10, shuffle=True, hist_eq=False)
+    #test_datalayer_param = dict(load_nn=False, batch_size=1, db_root='/nethome/ashaban6/caffe/ekf/data/db_test', nn_root='/nethome/ashaban6/caffe/ekf/data/db_train', num_threads=1, im_shape=[256, 256], nn_shape=[256, 256], nn_query_size=1, shuffle=False,hist_eq=False)
+    
+    train_datalayer_param = dict(load_nn=False, batch_size=128, db_root='/nethome/ashaban6/caffe/ekf/data/last_version/data0_ntot_100k_random', num_threads=2, im_shape=[128, 128], shuffle=True, hist_eq=False)
     test_datalayer_param = dict(load_nn=False, batch_size=1, db_root='/nethome/ashaban6/caffe/ekf/data/db_test', nn_root='/nethome/ashaban6/caffe/ekf/data/db_train', num_threads=1, im_shape=[256, 256], nn_shape=[256, 256], nn_query_size=1, shuffle=False,hist_eq=False)
     
-    #train_datalayer_param = dict(load_nn=False, batch_size=128, db_root='/nethome/ashaban6/caffe/ekf/data/last_version/data0_ntot_100k_random', num_threads=2, im_shape=[128, 128], shuffle=True, hist_eq=False)
-    #test_datalayer_param = dict(load_nn=False, batch_size=1, db_root='/nethome/ashaban6/caffe/ekf/data/db_test', nn_root='/nethome/ashaban6/caffe/ekf/data/db_train', num_threads=1, im_shape=[256, 256], nn_shape=[256, 256], nn_query_size=1, shuffle=False,hist_eq=False)
     #Create Train Network
     net_info = dict(name=name, predict_seg=False, datalayer_param=train_datalayer_param)
     net = create_net(net_info)

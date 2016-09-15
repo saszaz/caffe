@@ -88,7 +88,7 @@ class DartDB:
 	img_nums = np.array([int(f[3:-4]) for f in self.img_paths])
 	self.length = self.jps.shape[0]
 	num_order = np.argsort(img_nums)
-	assert np.all(img_nums[num_order] == np.arange(0,self.length))
+	assert len(img_nums) == self.length and np.all(img_nums[num_order] == np.arange(0,self.length))
 	self.img_paths = [self.img_paths[i] for i in num_order]
 
     def read_instance(self, indx, size=None, compute_mask=True):
@@ -166,6 +166,28 @@ class DartDB:
 		imsave(dst, img[0])
 	np.savetxt(osp.join(save_root, 'joints.txt'), self.jps, fmt='%1.10f', delimiter=', ')
     
+    def extend(self, db):
+	old_ind = int(db.length/2)
+	jp_old, img_old = db.read_instance(old_ind, size=None, compute_mask=False)
+	
+	self.jps = np.concatenate((self.jps, db.jps))
+	np.savetxt(osp.join(self.db_root, 'joints.txt'), self.jps, fmt='%1.10f', delimiter=', ')
+	if hasattr(self, 'dym_data'):
+	    self.dym_data = np.concatenate((self.dym_data, db.dym_data))
+	    np.savetxt(osp.join(self.db_root, 'dyn_data.txt'), self.dym_data, fmt='%1.10f', delimiter=', ')
+	for src_id in range(db.length):
+	    dst_id = src_id + self.length
+	    self.img_paths.append('fr_%07d.png' % dst_id)
+	    src = osp.join(db.db_root, db.img_paths[src_id])
+	    dst = osp.join(self.db_root, self.img_paths[dst_id])
+	    copyfile(src, dst)
+	
+	
+	jp_new, img_new = self.read_instance(self.length + old_ind, size=None, compute_mask=False)
+	assert np.all(jp_new == jp_old) and np.all(img_old[0] == img_new[0])
+	    
+	self.length = len(self.img_paths)
+	
 class NN:
     def __init__(self, db, max_sample=np.inf, nn_ignore=1):
 	self.db = db

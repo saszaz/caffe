@@ -130,12 +130,15 @@ void EltwiseLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 }
 
 template <typename Dtype>
-void EltwiseLayer<Dtype>::ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom,
-    										const vector<Blob<Dtype>*>& top) {
+void EltwiseLayer<Dtype>::ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   const int count = top[0]->count();
   const Dtype* top_data = top[0]->gpu_data();
   Dtype* top_jv_data = top[0]->mutable_gpu_diff();
-  Dtype * diffs_data = diffs_.mutable_gpu_data();
+  Dtype * diffs_data = NULL;
+  
+  if (op_ == EltwiseParameter_EltwiseOp_PROD) {
+    diffs_data = diffs_.mutable_gpu_data();
+  }
   caffe_gpu_set(count, (Dtype) 0.0, top_jv_data);
   for (int i = 0; i < bottom.size(); ++i) {
     const Dtype* bottom_data = bottom[i]->gpu_data();
@@ -150,22 +153,24 @@ void EltwiseLayer<Dtype>::ForwardJv_gpu(const vector<Blob<Dtype>*>& bottom,
             caffe_copy(count, bottom[j]->gpu_data(), diffs_data);
             initialized = true;
           } else {
-            caffe_gpu_mul(count, bottom[j]->gpu_data(), diffs_data,
-                      diffs_data);
+            caffe_gpu_mul(count, bottom[j]->gpu_data(), diffs_data, diffs_data);
           }
         }
       } else {
         caffe_gpu_div(count, top_data, bottom_data, diffs_data);
       }
       caffe_gpu_mul(count, bottom_jv_data, diffs_data, diffs_data);
+      caffe_gpu_add(count, diffs_data, top_jv_data, top_jv_data);
       break;
     case EltwiseParameter_EltwiseOp_SUM:
+      caffe_gpu_axpy(count, coeffs_[i], bottom_jv_data, top_jv_data);
+      break;
     case EltwiseParameter_EltwiseOp_MAX:
       NOT_IMPLEMENTED;
     default:
       LOG(FATAL) << "Unknown elementwise operation.";
     }
-  	caffe_gpu_add(count, diffs_data, top_jv_data, top_jv_data);
+    
   }
 }
 INSTANTIATE_LAYER_GPU_FORWARDJV(EltwiseLayer);
