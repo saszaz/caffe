@@ -84,9 +84,14 @@ class DartDB:
 	    self.dyn_data = np.genfromtxt(osp.join(self.db_root, 'dyn_data.txt'), delimiter=',')
 	except:
 	    pass
+     	try:
+	    self.traj_labels = np.genfromtxt(osp.join(self.db_root, 'traj_labels.txt'), delimiter=',')
+	except:
+	    pass
 	self.img_paths = [f for f in os.listdir(self.db_root) if f.startswith('fr_') and f.endswith('.png')]
 	img_nums = np.array([int(f[3:-4]) for f in self.img_paths])
 	self.length = self.jps.shape[0]
+	if self.traj_labels: assert len(self.length) == self.traj_labels.shape[0]
 	num_order = np.argsort(img_nums)
 	assert len(img_nums) == self.length and np.all(img_nums[num_order] == np.arange(0,self.length))
 	self.img_paths = [self.img_paths[i] for i in num_order]
@@ -114,6 +119,9 @@ class DartDB:
 		mask[img.sum(2) > 2.99990] = 1
 		masks += (mask,)
 	    return (jp, images, masks)
+	elif self.traj_labels:
+	    traj_label = self.traj_labels[indx]
+	    return (jp, images, traj_label)
 	else:
 	    return (jp, images)
 	
