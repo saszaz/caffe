@@ -24,6 +24,7 @@ class EKFNNLayer(caffe.Layer):
 	assert self.nn_db.jps.shape[1] == bottom[0].shape[1]
 	cur_top = 0
 	for nn_id in range(self.params.nn_num):
+		# print "nn_id = ", nn_id
 	    top[cur_top + 0].reshape(batch_size, 3, self.params.nn_shape[0], self.params.nn_shape[1])
 	    top[cur_top + 1].reshape(batch_size, 1, self.params.nn_shape[0], self.params.nn_shape[1])
 	    top[cur_top + 2].reshape(batch_size, self.nn_db.jps.shape[1])
@@ -37,16 +38,17 @@ class EKFNNLayer(caffe.Layer):
         for itt in range(bottom[0].shape[0]):
 	    jp = bottom[0].data[itt]
 	    nn_ids = self.nn.nn_ids(jp, self.params.nn_query_size)
-	    if hasattr(nn_ids, '__len__'):
-		nn_ids = np.random.choice(nn_ids, size=self.params.nn_num, replace=False)
-	    else:
-		nn_ids = [nn_ids]
+#	    if hasattr(nn_ids, '__len__'):
+#		nn_ids = np.random.choice(nn_ids, size=self.params.nn_num, replace=False)
+#	    else:
+#		nn_ids = [nn_ids]
+	    nn_ids = [nn_ids]
 	    
 	    for i in range(len(nn_ids)):
 		nn_id = nn_ids[i]
-		nn_jp, nn_img, nn_seg = self.nn_db.read_instance(nn_id, size=self.params.nn_shape)
+		nn_jp, nn_img, nn_seg, nn_tl = self.nn_db.read_instance(nn_id, size=self.params.nn_shape,compute_mask=False,use_traj_label=True)
 		top[i * 4 + 0].data[itt, ...] = nn_img[0].transpose((2,0,1))
-		top[i * 4 + 1].data[itt, ...] = nn_seg[0]
+		if nn_seg: top[i * 4 + 1].data[itt, ...] = nn_seg[0]
 		top[i * 4 + 2].data[itt, ...] = nn_jp
 		top[i * 4 + 3].data[itt, ...] = 1
 

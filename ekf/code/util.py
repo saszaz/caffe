@@ -96,7 +96,7 @@ class DartDB:
 	assert len(img_nums) == self.length and np.all(img_nums[num_order] == np.arange(0,self.length))
 	self.img_paths = [self.img_paths[i] for i in num_order]
 
-    def read_instance(self, indx, size=None, compute_mask=True):
+    def read_instance(self, indx, size=None, compute_mask=False, use_traj_label=False):
 	jp = self.jps[indx]
 	img_path = self.img_paths[indx]
 	img = imread(osp.join(self.db_root, img_path))
@@ -112,16 +112,17 @@ class DartDB:
 	    images = ()
 	    for s in size:
 		images += (resize_img(img, s),)
-	if compute_mask:
+	if compute_mask and not use_traj_label:
 	    masks = ()
 	    for img in images:
 		mask = np.zeros(img.shape[:-1])
 		mask[img.sum(2) > 2.99990] = 1
 		masks += (mask,)
 	    return (jp, images, masks)
-	elif self.traj_labels:
+	elif use_traj_label and not compute_mask:
+	    assert self.traj_labels
 	    traj_label = self.traj_labels[indx]
-	    return (jp, images, traj_label)
+	    return (jp, images, None, traj_label)
 	else:
 	    return (jp, images)
 	
@@ -214,6 +215,26 @@ class NN:
 	else:
 	    assert (nn + self.nn_ignore) == 1
 	    return self.data_ids[i]
+    def nt_ids(self, jp, nt=2, nn_start=10, nn_delta=10, max_iter=100): # Nearest-trajectory 
+      assert nt>=2
+      traj_found=[]
+    
+      nt_ids=self.nn_ids(jp,1)
+      nt_ids=[nt_ids]
+      nn_jp, nn_img, nn_seg, nn_tl = self.db.read_instance(nn_ids[0],size=self.params.nn_shape,compute_mask=False,use_traj_label=True)
+      
+      nn_num=nn_start
+      nn_iter=0
+	for i in range(2,nt):
+	  j=0
+       while j < max_iter: 
+	   nt_ids=self.nn_ids(jp,nn_num)
+        nn_num+=nn_delta
+         
+        
+        
+   
+        
 class Map(dict):
     """
     Example:
