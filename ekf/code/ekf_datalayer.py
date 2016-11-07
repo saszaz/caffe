@@ -52,13 +52,15 @@ class DataLoader(object):
    
     def load_next_data(self):
 	nid = self.get_next_id()
-        jp, imgs, segs = self.db.read_instance(nid, size=self.im_shape)
+        jp, imgs, segs = self.db.read_instance(nid, size=self.im_shape,compute_mask=True)
+#        jp, imgs = self.db.read_instance(nid, size=self.im_shape)
         item = {'jp':jp}
 	for i in xrange(len(imgs)):
 	    img = imgs[i]
 	    if self.hist_eq:
 		img = correct_hist(img)
 	    item.update({'img_' + shape_str(self.im_shape[i]):img.transpose((2,0,1)), 'seg_' + shape_str(self.im_shape[i]): segs[i]})
+#  	    item.update({'img_' + shape_str(self.im_shape[i]):img.transpose((2,0,1))})
 	if self.load_nn:
 	    nn_id = self.nn.nn_ids(jp, self.nn_query_size)
 	    if hasattr(nn_id, '__len__'):

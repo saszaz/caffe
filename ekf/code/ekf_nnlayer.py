@@ -33,19 +33,24 @@ class EKFNNLayer(caffe.Layer):
 	    #self.top_names.extend(['nn_img_' + str(nn_id), 'nn_seg_' + str(nn_id)])
 	    #self.top_names.append('nn_jp_' + str(nn_id))
 	    #self.top_names.append('nn_w_' + str(nn_id))
+     
     
     def forward(self, bottom, top):
         for itt in range(bottom[0].shape[0]):
 	    jp = bottom[0].data[itt]
-	    nn_ids = self.nn.nn_ids(jp, self.params.nn_query_size)
+#	    nn_ids = self.nn.nn_ids(jp, self.params.nn_query_size)
+	    nn_ids,__ = self.nn.nt_ids(jp, self.params.nn_query_size)
+     
 #	    if hasattr(nn_ids, '__len__'):
 #		nn_ids = np.random.choice(nn_ids, size=self.params.nn_num, replace=False)
 #	    else:
 #		nn_ids = [nn_ids]
-	    nn_ids = [nn_ids]
-	    
+     
+	    assert len(nn_ids)==self.params.nn_query_size
+     
 	    for i in range(len(nn_ids)):
 		nn_id = nn_ids[i]
+#		nn_id = nn_id[0]
 		nn_jp, nn_img, nn_seg, nn_tl = self.nn_db.read_instance(nn_id, size=self.params.nn_shape,compute_mask=False,use_traj_label=True)
 		top[i * 4 + 0].data[itt, ...] = nn_img[0].transpose((2,0,1))
 		if nn_seg: top[i * 4 + 1].data[itt, ...] = nn_seg[0]

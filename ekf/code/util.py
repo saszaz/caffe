@@ -10,6 +10,7 @@ from scipy.spatial import KDTree
 import os
 import errno
 from shutil import copyfile
+import time
 
 debug_mode = False
 def cprint(string, style = None):
@@ -91,7 +92,7 @@ class DartDB:
 	self.img_paths = [f for f in os.listdir(self.db_root) if f.startswith('fr_') and f.endswith('.png')]
 	img_nums = np.array([int(f[3:-4]) for f in self.img_paths])
 	self.length = self.jps.shape[0]
-	if self.traj_labels: assert len(self.length) == self.traj_labels.shape[0]
+	if self.traj_labels is not None: assert self.length == self.traj_labels.shape[0]
 	num_order = np.argsort(img_nums)
 	assert len(img_nums) == self.length and np.all(img_nums[num_order] == np.arange(0,self.length))
 	self.img_paths = [self.img_paths[i] for i in num_order]
@@ -120,7 +121,7 @@ class DartDB:
 		masks += (mask,)
 	    return (jp, images, masks)
 	elif use_traj_label and not compute_mask:
-	    assert self.traj_labels
+	    assert self.traj_labels is not None
 	    traj_label = self.traj_labels[indx]
 	    return (jp, images, None, traj_label)
 	else:
@@ -204,6 +205,7 @@ class NN:
 	self.max_sample = max_sample
 	self.create_db()
 	
+
     def create_db(self):
 	self.data_ids = np.array(random.sample(np.arange(self.db.length), min(self.max_sample, self.db.length)), dtype='int')
 	self.kdtree = KDTree(data=self.db.jps[self.data_ids].copy())
@@ -215,25 +217,44 @@ class NN:
 	else:
 	    assert (nn + self.nn_ignore) == 1
 	    return self.data_ids[i]
-    def nt_ids(self, jp, nt=2, nn_start=10, nn_delta=10, max_iter=100): # Nearest-trajectory 
+    def nt_ids(self, jp, nt=2, nn_start=20, nn_delta=20, max_nn=500, max_iter=50): # Nearest-trajectory 
       assert nt>=2
-      traj_found=[]
+      nt_ids=[] ## Nearest-trajectory labels
     
-      nt_ids=self.nn_ids(jp,1)
-      nt_ids=[nt_ids]
-      nn_jp, nn_img, nn_seg, nn_tl = self.db.read_instance(nn_ids[0],size=self.params.nn_shape,compute_mask=False,use_traj_label=True)
+      ntn_ids=self.nn_ids(jp,1) ## Nearest-trajectory-neighbor id's
+      ntn_ids=[ntn_ids]
+      nn_tl = self.db.traj_labels[ntn_ids[0]]
+      nt_ids.append(nn_tl)
       
+#      t_start=time.time()
       nn_num=nn_start
-      nn_iter=0
-	for i in range(2,nt):
-	  j=0
-       while j < max_iter: 
-	   nt_ids=self.nn_ids(jp,nn_num)
+      j=0
+      while j < max_iter and nn_num < max_nn: 
+        nn_ids=self.nn_ids(jp,nn_num)
+        
+        for nn_id in nn_ids:
+            nn_tl = self.db.traj_labels[nn_id]
+            
+            if nn_tl not in nt_ids:
+                nt_ids.append(nn_tl)
+                ntn_ids.append(nn_id)
+            if len(nt_ids)==nt:
+#                t = time.time()-t_start
+#                return (ntn_ids, nt_ids, t, (j+1)*nn_delta, nn_num)
+                return (ntn_ids, nt_ids)
+            
         nn_num+=nn_delta
-         
-        
-        
-   
+        j+=1
+    
+#      t = time.time()-t_start
+#      return (ntn_ids, nt_ids, t, (j+1)*nn_delta, nn_num)
+      try:
+          assert len(ntn_ids)==nt
+      except AssertionError:
+          print "Number of ntn_ids incorrect."
+          exit(1)
+      return (ntn_ids, nt_ids)
+
         
 class Map(dict):
     """
