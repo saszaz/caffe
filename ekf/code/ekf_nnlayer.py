@@ -29,7 +29,13 @@ class EKFNNLayer(caffe.Layer):
 	    top[cur_top + 1].reshape(batch_size, 1, self.params.nn_shape[0], self.params.nn_shape[1])
 	    top[cur_top + 2].reshape(batch_size, self.nn_db.jps.shape[1])
 	    top[cur_top + 3].reshape(batch_size, 1)
-	    cur_top += 4
+	    top[cur_top + 4].reshape(batch_size, 1)
+	    cur_top += 5
+#	    top[cur_top + 0].reshape(batch_size, 3, self.params.nn_shape[0], self.params.nn_shape[1])
+#	    top[cur_top + 1].reshape(batch_size, 1, self.params.nn_shape[0], self.params.nn_shape[1])
+#	    top[cur_top + 2].reshape(batch_size, self.nn_db.jps.shape[1])
+#	    top[cur_top + 3].reshape(batch_size, 1)
+#	    cur_top += 4
 	    #self.top_names.extend(['nn_img_' + str(nn_id), 'nn_seg_' + str(nn_id)])
 	    #self.top_names.append('nn_jp_' + str(nn_id))
 	    #self.top_names.append('nn_w_' + str(nn_id))
@@ -39,8 +45,8 @@ class EKFNNLayer(caffe.Layer):
         for itt in range(bottom[0].shape[0]):
 	    jp = bottom[0].data[itt]
 #	    nn_ids = self.nn.nn_ids(jp, self.params.nn_query_size)
-	    nn_ids,__ = self.nn.nt_ids(jp, self.params.nn_query_size)
-     
+	    nn_ids,nt_ids = self.nn.nt_ids(jp, self.params.nn_query_size)
+
 #	    if hasattr(nn_ids, '__len__'):
 #		nn_ids = np.random.choice(nn_ids, size=self.params.nn_num, replace=False)
 #	    else:
@@ -48,14 +54,31 @@ class EKFNNLayer(caffe.Layer):
      
 	    assert len(nn_ids)==self.params.nn_query_size
      
+#	    print ""
+#	    print "nn_ids = ", nn_ids
+#	    print "nt_ids = ", nt_ids
 	    for i in range(len(nn_ids)):
 		nn_id = nn_ids[i]
 #		nn_id = nn_id[0]
 		nn_jp, nn_img, nn_seg, nn_tl = self.nn_db.read_instance(nn_id, size=self.params.nn_shape,compute_mask=False,use_traj_label=True)
-		top[i * 4 + 0].data[itt, ...] = nn_img[0].transpose((2,0,1))
+#		print "neighbor: ", i
+#		print "nn_jp: ", nn_jp
+#		print "nn_tl: ", nn_tl
+#		top[i * 4 + 0].data[itt, ...] = nn_img[0].transpose((2,0,1))
+#		if nn_seg: top[i * 4 + 1].data[itt, ...] = nn_seg[0]
+#		top[i * 4 + 2].data[itt, ...] = nn_jp
+#		top[i * 4 + 3].data[itt, ...] = 1
+#		top[i * 4 + 3].data[itt, ...] = nn_tl  
+  
+		top[i * 5 + 0].data[itt, ...] = nn_img[0].transpose((2,0,1))
 		if nn_seg: top[i * 4 + 1].data[itt, ...] = nn_seg[0]
-		top[i * 4 + 2].data[itt, ...] = nn_jp
-		top[i * 4 + 3].data[itt, ...] = 1
+		top[i * 5 + 2].data[itt, ...] = nn_jp
+		top[i * 5 + 3].data[itt, ...] = 1
+		top[i * 5 + 4].data[itt, ...] = nn_tl
+  
+#	    for j in range(len(nt_ids)):
+#		top[i * 4 + 4 + j].data[itt, ...] = nt_ids[j]         
+          
 
     def backward(self, top, propagate_down, bottom):
 	bottom[0].diff[...] = 0

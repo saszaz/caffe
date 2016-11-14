@@ -223,6 +223,7 @@ class NN:
     
       ntn_ids=self.nn_ids(jp,1) ## Nearest-trajectory-neighbor id's
       ntn_ids=[ntn_ids]
+      
       nn_tl = self.db.traj_labels[ntn_ids[0]]
       nt_ids.append(nn_tl)
       
