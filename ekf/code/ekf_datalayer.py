@@ -32,6 +32,9 @@ class DataLoader(object):
 	self.lock = Lock()
 	self.db = db
 	self.cur = db.length
+	self.compute_mask = params['compute_mask']
+ 	self.use_traj_label = params['use_traj_label']
+  	self.use_cam_pose = params['use_cam_pose']
         self.im_shape = params['im_shape']
         self.nn_shape = params['nn_shape']
         self.hist_eq = params['hist_eq']
@@ -52,14 +55,23 @@ class DataLoader(object):
    
     def load_next_data(self):
 	nid = self.get_next_id()
-        jp, imgs, segs = self.db.read_instance(nid, size=self.im_shape,compute_mask=True)
+#        jp, imgs, segs = self.db.read_instance(nid, size=self.im_shape,compute_mask=True)
+        
+        jp, imgs, segs, tl, cp = self.db.read_instance(nid, size=self.im_shape,
+                                                                 compute_mask=self.compute_mask,
+                                                                 use_traj_label=self.use_traj_label,
+                                                                 use_cam_pose=self.use_cam_pose)
 #        jp, imgs = self.db.read_instance(nid, size=self.im_shape)
         item = {'jp':jp}
+        if cp is not None: item.update({'cp':cp})
+            
 	for i in xrange(len(imgs)):
 	    img = imgs[i]
 	    if self.hist_eq:
 		img = correct_hist(img)
-	    item.update({'img_' + shape_str(self.im_shape[i]):img.transpose((2,0,1)), 'seg_' + shape_str(self.im_shape[i]): segs[i]})
+	    item.update({'img_' + shape_str(self.im_shape[i]):img.transpose((2,0,1))})
+	    if segs is not None:
+		item.update({'seg_' + shape_str(self.im_shape[i]): segs[i]})
 #  	    item.update({'img_' + shape_str(self.im_shape[i]):img.transpose((2,0,1))})
 	if self.load_nn:
 	    nn_id = self.nn.nn_ids(jp, self.nn_query_size)
@@ -89,6 +101,9 @@ class EKFDataLayer(caffe.Layer):
     def setup(self, bottom, top):
         params = eval(self.param_str)
         check_params(params, 
+                compute_mask=False,
+                use_traj_label=False,
+                use_cam_pose=False,
                 batch_size=1, 
                 db_root=None, 
                 nn_root='',
@@ -118,23 +133,30 @@ class EKFDataLayer(caffe.Layer):
         self.queue = Queue(self.batch_size)
         self.processes = [None]*self.num_threads
 	nn_db = None
-        db = DartDB(params['db_root'])
+        db = DartDB(params['db_root'],params['compute_mask'],params['use_traj_label'],params['use_cam_pose'])
         
 	#Reshape tops
 	cur_top = 0
 	self.top_names = []
 	for im_shape in params['im_shape']:
-	    self.top_names.extend(['img_' + shape_str(im_shape), 'seg_' + shape_str(im_shape)])
-	    top[cur_top].reshape(self.batch_size, 3, im_shape[0], im_shape[1])
-	    top[cur_top + 1].reshape(self.batch_size, 1, im_shape[0], im_shape[1])
-	    cur_top += 2
+	    self.top_names.extend(['img_' + shape_str(im_shape)])
+	    top[cur_top].reshape(self.batch_size, im_shape[2], im_shape[0], im_shape[1])
+	    cur_top += 1
+	    if params['compute_mask']:
+             self.top_names.extend(['seg_' + shape_str(im_shape)])
+             top[cur_top + 1].reshape(self.batch_size, 1, im_shape[0], im_shape[1])
+             cur_top += 1
 	self.top_names.append('jp')
         top[cur_top].reshape(self.batch_size, db.jps.shape[1])
         cur_top += 1
+        if params['use_cam_pose']:
+            self.top_names.append('cp')
+            top[cur_top].reshape(self.batch_size, db.cam_poses.shape[1])
+            cur_top += 1
         if self.load_nn:
 	    for nn_shape in params['nn_shape']:
 		self.top_names.extend(['nn_img_' + shape_str(nn_shape), 'nn_seg_' + shape_str(nn_shape)])
-		top[cur_top].reshape(self.batch_size, 3, nn_shape[0], nn_shape[1])
+		top[cur_top].reshape(self.batch_size, nn_shape[2], nn_shape[0], nn_shape[1])
 		top[cur_top + 1].reshape(self.batch_size, 1, nn_shape[0], nn_shape[1])
 		cur_top += 2
 	    self.top_names.append('nn_jp')
@@ -144,7 +166,7 @@ class EKFDataLayer(caffe.Layer):
 		params['nn_root'] = params['db_root']
 		nn_db = db
 	    else:
-		nn_db = DartDB(params['nn_root'])
+		nn_db = DartDB(params['nn_root'],params['compute_mask'],params['use_traj_label'],params['use_cam_pose'])
 	#Initiate and start processes
         for i in range(self.num_threads):
             data_loader = DataLoader(params, db, nn_db)

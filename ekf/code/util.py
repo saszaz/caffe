@@ -73,8 +73,16 @@ def resize_img(img, size=None):
 	return resize(img, size)
     return img
 class DartDB:
-    def __init__(self, db_root=None):
+    def __init__(self, db_root=None,                
+                compute_mask=False,
+                use_traj_label=False,
+                use_cam_pose=False):
+                    
 	self.db_root = db_root
+ 	self.compute_mask = compute_mask
+  	self.use_traj_label = use_traj_label
+   	self.use_cam_pose = use_cam_pose
+   	self.cam_poses = None
 	if db_root is not None:
 	    self.init_db()
 	
@@ -85,48 +93,66 @@ class DartDB:
 	    self.dyn_data = np.genfromtxt(osp.join(self.db_root, 'dyn_data.txt'), delimiter=',')
 	except:
 	    pass
-     	try:
-	    self.traj_labels = np.genfromtxt(osp.join(self.db_root, 'traj_labels.txt'), delimiter=',')
-	except:
-	    pass
+	if self.use_traj_label:
+	    try:
+		self.traj_labels = np.genfromtxt(osp.join(self.db_root, 'traj_labels.txt'), delimiter=',')
+	    except:
+		print "Error: traj_labels.txt not found."
+		raise  
+	if self.use_cam_pose:
+	    try:
+		self.cam_poses = np.genfromtxt(osp.join(self.db_root, 'cam_pos.txt'), delimiter=',')
+		if len(self.cam_poses.shape) == 1: self.cam_poses = self.cam_poses.reshape((self.cam_poses.shape[0],1))
+	    except:
+		print "Error: cam_pos.txt not found."
+		raise  
 	self.img_paths = [f for f in os.listdir(self.db_root) if f.startswith('fr_') and f.endswith('.png')]
 	img_nums = np.array([int(f[3:-4]) for f in self.img_paths])
 	self.length = self.jps.shape[0]
-	if self.traj_labels is not None: assert self.length == self.traj_labels.shape[0]
+	if self.use_traj_label: assert self.length == self.traj_labels.shape[0]
+ 	if self.use_cam_pose: assert self.length == self.cam_poses.shape[0]
 	num_order = np.argsort(img_nums)
 	assert len(img_nums) == self.length and np.all(img_nums[num_order] == np.arange(0,self.length))
 	self.img_paths = [self.img_paths[i] for i in num_order]
 
-    def read_instance(self, indx, size=None, compute_mask=False, use_traj_label=False):
+    def read_instance(self, indx, size=None, compute_mask=False, use_traj_label=False, use_cam_pose=False):
 	jp = self.jps[indx]
 	img_path = self.img_paths[indx]
 	img = imread(osp.join(self.db_root, img_path))
 	img = img_as_float(img)
-	if not (img.max() <= 1.0 and img.min() >= 0 and len(img.shape) == 3 and img.shape[2] == 3):
+	if len(img.shape) == 2: img = img.reshape((img.shape[0],img.shape[1],1))
+     
+	if not (img.max() <= 1.0 and img.min() >= 0 and len(img.shape) == 3 and img.shape[2] == 3 or img.shape[2] == 1):
 	    print img.max(), img.min(), img.shape
 	    e = Exception('Image has a wrong format: ' + osp.join(self.db_root, img_path))
 	    raise ImageFormatException(e)
 	    
+	images=None
+	masks=None
+	traj_label=None
+	cam_pose=None
 	if size is None or not hasattr(size[0], '__len__'): 
 	    images = (resize_img(img, size),)
 	else:
 	    images = ()
 	    for s in size:
 		images += (resize_img(img, s),)
-	if compute_mask and not use_traj_label:
+	if compute_mask:
 	    masks = ()
 	    for img in images:
 		mask = np.zeros(img.shape[:-1])
 		mask[img.sum(2) > 2.99990] = 1
 		masks += (mask,)
-	    return (jp, images, masks)
-	elif use_traj_label and not compute_mask:
+	if use_traj_label:
 	    assert self.traj_labels is not None
 	    traj_label = self.traj_labels[indx]
-	    return (jp, images, None, traj_label)
-	else:
-	    return (jp, images)
-	
+	if use_cam_pose:
+         assert self.cam_poses is not None
+         cam_pose = self.cam_poses[indx]
+     
+	return (jp, images, masks, traj_label, cam_pose)
+ 
+ 
     def read_mean_img(self, size=None):
 	img = imread(osp.join(self.db_root, 'mean.png'))
 	img = img_as_float(img)
@@ -199,16 +225,22 @@ class DartDB:
 	self.length = len(self.img_paths)
 	
 class NN:
-    def __init__(self, db, max_sample=np.inf, nn_ignore=1):
+    def __init__(self, db, max_sample=np.inf, nn_ignore=1, use_cam_pose=False):
 	self.db = db
 	self.nn_ignore = nn_ignore
 	self.max_sample = max_sample
+	self.use_cam_pose = use_cam_pose
 	self.create_db()
 	
 
     def create_db(self):
 	self.data_ids = np.array(random.sample(np.arange(self.db.length), min(self.max_sample, self.db.length)), dtype='int')
-	self.kdtree = KDTree(data=self.db.jps[self.data_ids].copy())
+	if self.use_cam_pose :
+	    jps = self.db.jps[self.data_ids].copy()
+	    cam_poses = self.db.cam_poses[self.data_ids].copy()
+	    self.kdtree = KDTree(data=np.concatenate((jps,cam_poses),axis=1))
+	else:
+	    self.kdtree = KDTree(data=self.db.jps[self.data_ids].copy()) 
 	
     def nn_ids(self, jp, nn = 1):
 	d, i = self.kdtree.query(jp, k=nn+self.nn_ignore, eps=0, p=2)
