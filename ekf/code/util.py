@@ -96,6 +96,7 @@ class DartDB:
 	if self.use_traj_label:
 	    try:
 		self.traj_labels = np.genfromtxt(osp.join(self.db_root, 'traj_labels.txt'), delimiter=',')
+		print "Found traj_labels.txt"
 	    except:
 		print "Error: traj_labels.txt not found."
 		raise  

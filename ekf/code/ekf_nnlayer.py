@@ -38,8 +38,11 @@ class EKFNNLayer(caffe.Layer):
 	    top[cur_top + 3].reshape(batch_size, 1)
 	    top[cur_top + 4].reshape(batch_size, 1)
 	    top[cur_top + 5].reshape(batch_size, 1)
-	    top[cur_top + 6].reshape(batch_size, 1)
-	    cur_top += 7
+	    if self.params.use_cam_pose is False: 
+          		cur_top += 6
+	    else:
+          		top[cur_top + 6].reshape(batch_size, 1)
+          		cur_top += 7
 #	    top[cur_top + 0].reshape(batch_size, 3, self.params.nn_shape[0], self.params.nn_shape[1])
 #	    top[cur_top + 1].reshape(batch_size, 1, self.params.nn_shape[0], self.params.nn_shape[1])
 #	    top[cur_top + 2].reshape(batch_size, self.nn_db.jps.shape[1])
@@ -89,16 +92,33 @@ class EKFNNLayer(caffe.Layer):
 #		top[i * 4 + 3].data[itt, ...] = 1
 #		top[i * 4 + 3].data[itt, ...] = nn_tl  
   
-		top[i * 7 + 0].data[itt, ...] = nn_img[0].transpose((2,0,1))
-		if nn_seg: 
-          		top[i * 7 + 1].data[itt, ...] = nn_seg[0]
-		else:
+     
+		if self.params.use_cam_pose is True: 
+                                
+#          		top[i * 7 + 0].data[itt, ...] = nn_img[0].transpose((2,0,1))
+#          		if nn_seg:
+#                top[i * 7 + 1].data[itt, ...] = nn_seg[0]
+#          		else:
           		top[i * 7 + 1].data[itt, ...] = None
-		top[i * 7 + 2].data[itt, ...] = nn_jp
-		top[i * 7 + 3].data[itt, ...] = 1
-		top[i * 7 + 4].data[itt, ...] = nn_tl
-		top[i * 7 + 5].data[itt, ...] = nn_id
-		top[i * 7 + 6].data[itt, ...] = nn_cp
+               
+          		top[i * 7 + 2].data[itt, ...] = nn_jp
+          		top[i * 7 + 3].data[itt, ...] = self.params.nn_shape[2]
+          		top[i * 7 + 4].data[itt, ...] = nn_tl
+          		top[i * 7 + 5].data[itt, ...] = nn_id
+          		top[i * 7 + 6].data[itt, ...] = nn_cp
+         
+		else: 
+                                
+          		top[i * 6 + 0].data[itt, ...] = nn_img[0].transpose((2,0,1))
+#          		if nn_seg: 
+#              		top[i * 6 + 1].data[itt, ...] = nn_seg[0]
+#          		else:
+          		top[i * 6 + 1].data[itt, ...] = None
+               
+          		top[i * 6 + 2].data[itt, ...] = nn_jp
+          		top[i * 6 + 3].data[itt, ...] = self.params.nn_shape[2]
+          		top[i * 6 + 4].data[itt, ...] = nn_tl
+          		top[i * 6 + 5].data[itt, ...] = nn_id
   
   
 #	    for j in range(len(nt_ids)):
