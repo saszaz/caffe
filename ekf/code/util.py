@@ -178,10 +178,16 @@ class DartDB:
     def __sample(self, sample_ids):
 	db = DartDB()
 	db.db_root = self.db_root
+#	db.compute_mask = self.compute_mask
+	db.use_traj_label = self.use_traj_label
+#	db.use_cam_pose = self.use_cam_pose
+  
 	db.jps = self.jps[sample_ids]
 	if hasattr(self, 'dym_data'):
 	    db.dym_data = self.dym_data
 	db.img_paths = [self.img_paths[i] for i in sample_ids]
+	if db.use_traj_label:
+	    db.traj_labels = self.traj_labels[sample_ids]
 	db.length = len(sample_ids)
 	return db
     
